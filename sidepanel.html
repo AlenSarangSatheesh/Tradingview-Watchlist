@@ -1,0 +1,1346 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TradingView Watchlist Extension</title>
+  <style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #111;
+  color: #eee;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1e1e1e;
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+/* Search container styling */
+.search-container {
+  position: sticky;
+  top: 49px;
+  padding: 6px 10px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #333;
+  z-index: 99;
+}
+
+.search-input {
+  width: 100%;
+  padding: 6px 26px 6px 10px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 3px;
+  color: #fff;
+  font-size: 12px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s ease;
+  height: 28px;
+}
+
+.search-input:focus {
+  border-color: #628ce1;
+}
+
+.search-input::placeholder {
+  color: #888;
+  font-size: 12px;
+}
+
+.clear-search-btn {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.clear-search-btn:hover {
+  background: #444;
+  color: #fff;
+}
+
+/* Icon styling */
+.icon {
+  width: 14px;
+  height: 14px;
+  filter: invert(1);
+  opacity: 0.9;
+}
+
+.icon.small {
+  width: 12px;
+  height: 12px;
+}
+
+.actions button, #backBtn, #uploadBtn, #sortBtn, #clearAllBtn, #alarmBtn, #renameBtn {
+  background: #2b2b2b;
+  color: #eee;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  position: relative;
+}
+
+.actions button:hover, #backBtn:hover, #uploadBtn:hover, #sortBtn:hover, #clearAllBtn:hover, #alarmBtn:hover, #renameBtn:hover {
+  background: #3a3a3a;
+}
+
+.actions button:hover .icon, #backBtn:hover .icon, #uploadBtn:hover .icon, #sortBtn:hover .icon, #clearAllBtn:hover .icon, #alarmBtn:hover .icon, #renameBtn:hover .icon {
+  opacity: 1;
+}
+
+#alarmBtn {
+  background: #2b2b2b;
+}
+
+#alarmBtn:hover {
+  background: #3a3a3a;
+}
+
+#sortBtn {
+  background: #2b2b2b;
+}
+
+#sortBtn:hover {
+  background: #3a3a3a;
+}
+
+#clearAllBtn {
+  background: #d32f2f;
+}
+
+#clearAllBtn:hover {
+  background: #b71c1c;
+}
+
+#refreshBtn {
+  background: #2b2b2b;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#refreshBtn:hover {
+  background: #3a3a3a;
+}
+
+#refreshBtn .tooltip {
+  transform: translateX(-50%) translateY(0);
+}
+
+#refreshBtn:hover .tooltip {
+  opacity: 1;
+}
+
+#refreshBtn.refreshing {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Tooltip styling */
+.tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+  margin-top: 5px;
+}
+
+.actions button:hover .tooltip,
+#backBtn:hover .tooltip,
+#uploadBtn:hover .tooltip,
+#sortBtn:hover .tooltip,
+#clearAllBtn:hover .tooltip,
+#alarmBtn:hover .tooltip,
+#renameBtn:hover .tooltip {
+  opacity: 1;
+}
+
+.watchlist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+/* Updated stock list item styling */
+.watchlist li {
+  padding: 8px 10px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 40px;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.watchlist li:hover {
+  background: #222;
+}
+
+.watchlist li.active {
+  background: #0057ff;
+  color: white;
+}
+
+/* Selected watchlist styling */
+.watchlist li.selected {
+  background: #2a2a2a;
+  border-left: 3px solid #0057ff;
+}
+
+/* Drag and drop styling */
+.watchlist li[draggable="true"] {
+  user-select: none;
+}
+
+.watchlist li.dragging {
+  opacity: 0.4;
+  background: #333;
+  border: 2px dashed #0057ff;
+}
+
+.watchlist li.drag-over {
+  border-top: 3px solid #0057ff;
+  background: rgba(0, 87, 255, 0.1);
+}
+
+/* Main content container (everything except delete button) */
+.stock-main-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+/* Stock name styling */
+.stock-name {
+  font-weight: 500;
+  min-width: 60px;
+  font-size: 14px;
+  flex: 1;
+  margin-right: 8px;
+}
+
+/* Price info styling - Updated to create a contained box */
+.price-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  width: 120px;
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 1.2;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 6px 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  position: absolute;
+  right: 32px;
+}
+
+.price {
+  font-weight: bold;
+  font-size: 13px;
+  color: #ffffff;
+  text-align: center;
+  margin-bottom: 2px;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.change {
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+  text-align: center;
+  display: inline-block;
+  width: 100%;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.change.positive {
+  color: #00e676;
+  background: rgba(0, 230, 118, 0.15);
+  border: 1px solid rgba(0, 230, 118, 0.3);
+}
+
+.change.negative {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.15);
+  border: 1px solid rgba(244, 67, 54, 0.3);
+}
+
+.change.neutral {
+  color: #999;
+  background: rgba(153, 153, 153, 0.15);
+  border: 1px solid rgba(153, 153, 153, 0.3);
+}
+
+/* Active stock gets highlighted price box */
+.watchlist li.active .price-info {
+  background: #0057ff;
+  border-color: #0066ff;
+  box-shadow: 0 2px 6px rgba(0, 87, 255, 0.3);
+}
+
+.watchlist li.active .price-info .price {
+  color: #ffffff;
+}
+
+.watchlist li.active .price-info .change {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Delete button styling - positioned in right corner */
+.delete-btn-right {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 2px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.delete-btn-right:hover {
+  background: #d32f2f;
+  transform: scale(1.05);
+}
+
+.delete-btn-right .icon {
+  filter: invert(1);
+  opacity: 0.6;
+  width: 12px;
+  height: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.delete-btn-right:hover .icon {
+  opacity: 1;
+}
+
+/* Alarm indicator button for stocks */
+.stock-alarm-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 2px;
+  flex-shrink: 0;
+  margin-left: 4px;
+  position: relative;
+}
+
+.stock-alarm-btn:hover {
+  background: rgba(255, 107, 53, 0.2);
+  transform: scale(1.05);
+}
+
+.stock-alarm-btn .icon {
+  filter: invert(1);
+  opacity: 1;
+  width: 12px;
+  height: 12px;
+}
+
+.stock-alarm-btn .alarm-count-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #4caf50;
+  color: white;
+  border-radius: 50%;
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #1e1e1e;
+}
+
+/* Button group container */
+.stock-buttons-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Updated Modal Styling for Full Screen */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.9);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #1e1e1e;
+  border-radius: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  border: none;
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 18px;
+  border-bottom: 1px solid #333;
+  flex-shrink: 0;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  flex: 1;
+  text-align: center;
+}
+
+/* Alert Toggle Switch Styling */
+.alert-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 12px;
+}
+
+.alert-toggle-label {
+  font-size: 12px;
+  color: #ccc;
+  font-weight: 500;
+}
+
+.alert-toggle-switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  background: #d32f2f;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  border: 2px solid #333;
+}
+
+.alert-toggle-switch.enabled {
+  background: #4caf50;
+}
+
+.alert-toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.alert-toggle-switch.enabled .alert-toggle-slider {
+  transform: translateX(20px);
+}
+
+.scroll-to-triggered-btn {
+  background: #4caf50;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-right: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.scroll-to-triggered-btn:hover {
+  background: #45a049;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.scroll-to-triggered-btn .icon {
+  width: 10px;
+  height: 10px;
+  filter: invert(1);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #333;
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.close-btn.back-btn {
+  background: #2b2b2b !important;
+  border-radius: 3px !important;
+  width: 28px !important;
+  height: 28px !important;
+  padding: 0 !important;
+  font-size: 0 !important;
+}
+
+.close-btn.back-btn:hover {
+  background: #3a3a3a !important;
+  transform: scale(1) !important;
+}
+
+.close-btn.back-btn .icon {
+  filter: invert(1);
+  opacity: 0.9;
+  width: 14px;
+  height: 14px;
+}
+
+.close-btn.back-btn:hover .icon {
+  opacity: 1;
+}
+
+.modal-body {
+  padding: 18px;
+  flex: 1;
+  overflow-y: auto;
+  height: 0;
+}
+
+.alarm-section-header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 16px 0 12px 0;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #444;
+}
+
+.alarm-section-header-container:first-child {
+  margin-top: 0;
+}
+
+.alarm-section-header {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.delete-all-btn {
+  background: #d32f2f;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+}
+
+.delete-all-btn:hover {
+  background: #b71c1c;
+}
+
+.delete-all-btn .icon {
+  filter: invert(1);
+  opacity: 1;
+  width: 14px;
+  height: 14px;
+}
+
+.alarm-section-divider {
+  height: 1px;
+  background: #333;
+  margin: 16px 0;
+}
+
+.alarms-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.alarm-item {
+  padding: 8px 0px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 40px;
+  position: relative;
+  transition: background 0.2s ease;
+}
+
+.alarm-item:hover {
+  background: #222;
+}
+
+.alarm-item.triggered-alarm {
+  background: rgba(76, 175, 80, 0.1);
+  border-left: 3px solid #4caf50;
+}
+
+.alarm-item.triggered-alarm:hover {
+  background: rgba(76, 175, 80, 0.15);
+}
+
+.alarm-item.highlighted-alarm {
+  background: rgba(0, 87, 255, 0.15);
+  border-left: 3px solid #0057ff;
+  animation: highlight-pulse 2s ease-in-out 3;
+}
+
+.alarm-item.highlighted-alarm:hover {
+  background: rgba(0, 87, 255, 0.2);
+}
+
+@keyframes highlight-pulse {
+  0%, 100% { 
+    background: rgba(0, 87, 255, 0.15);
+  }
+  50% { 
+    background: rgba(0, 87, 255, 0.25);
+  }
+}
+
+.alarm-main-content {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+}
+
+.alarm-stock-name {
+  font-weight: 500;
+  font-size: 14px;
+  color: #fff;
+  min-width: 60px;
+  flex: 1;
+  margin-right: 8px;
+}
+
+.alarm-stock-name.clickable-stock {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.alarm-stock-name.clickable-stock:hover {
+  background: rgba(0, 87, 255, 0.1);
+  color: #4a90e2 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 87, 255, 0.2);
+}
+
+.alarm-price-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  width: 120px;
+  text-align: center;
+  flex-shrink: 0;
+  line-height: 1.2;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 8px 10px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  position: absolute;
+  right: 32px;
+}
+
+.alarm-price-info.triggered {
+  background: rgba(76, 175, 80, 0.2);
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.alarm-target {
+  font-weight: bold;
+  font-size: 14px;
+  color: #ffffff;
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 3px;
+}
+
+.alarm-price-info.triggered .alarm-target {
+  color: #4caf50;
+  font-size: 14px;
+}
+
+.alarm-date {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+  width: 100%;
+  white-space: nowrap;
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 500;
+  display: inline-block;
+  box-sizing: border-box;
+}
+
+.delete-alarm-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding: 2px;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.delete-alarm-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.05);
+}
+
+.delete-alarm-btn .icon {
+  filter: invert(1);
+  opacity: 0.6;
+  width: 12px;
+  height: 12px;
+  transition: opacity 0.2s ease;
+}
+
+.delete-alarm-btn:hover .icon {
+  opacity: 1;
+}
+
+.no-alarms {
+  text-align: center;
+  color: #888;
+  font-style: italic;
+  padding: 60px 30px;
+  font-size: 16px;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #323232;
+  color: white;
+  padding: 10px 15px;
+  border-radius: 5px;
+  opacity: 0;
+  transform: translateX(100%);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  max-width: 300px;
+  word-wrap: break-word;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.watchlist li.hidden {
+  display: none;
+}
+
+.clickable-stock {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+}
+
+.clickable-stock:hover {
+  background: rgba(0, 87, 255, 0.1);
+  color: #4a90e2 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 87, 255, 0.2);
+}
+
+.clickable-stock:active {
+  transform: translateY(0);
+  background: rgba(0, 87, 255, 0.2);
+}
+
+.clickable-stock:hover::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 8px;
+  right: 8px;
+  height: 1px;
+  background: #4a90e2;
+  animation: underline-expand 0.2s ease;
+}
+
+@keyframes underline-expand {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.alarm-symbol.clickable-stock {
+  font-weight: bold;
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 8px;
+  user-select: none;
+}
+
+.alarm-symbol.clickable-stock:hover {
+  color: #4a90e2 !important;
+}
+
+.clickable-stock[data-symbol]::before {
+  content: "Click to open in TradingView";
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 1000;
+}
+
+.clickable-stock[data-symbol]:hover::before {
+  opacity: 1;
+}
+
+.modal .clickable-stock[data-symbol]::before {
+  position: fixed;
+  top: auto;
+  bottom: 100%;
+  margin-bottom: 5px;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 12px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: #2a2a2a;
+  border-radius: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 6px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+@media (max-width: 600px) {
+  .alarm-main-content {
+    flex-direction: row;
+    align-items: center;
+  }
+  
+  .alarm-price-info {
+    position: absolute;
+    right: 32px;
+    width: 100px;
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  
+  .alarm-stock-name {
+    min-width: 50px;
+    margin-right: 8px;
+    font-size: 13px;
+  }
+  
+  .alarm-target {
+    font-size: 12px;
+  }
+  
+  .alarm-date {
+    font-size: 9px;
+  }
+  
+  .modal-header {
+    padding: 12px 16px;
+  }
+  
+  .modal-header h3 {
+    font-size: 16px;
+  }
+  
+  .close-btn {
+    font-size: 22px;
+    width: 28px;
+    height: 28px;
+  }
+  
+  .modal-body {
+    padding: 16px;
+  }
+  
+  .alarm-section-header {
+    font-size: 14px;
+  }
+  
+  .alarm-item {
+    padding: 8px 0px;
+    min-height: 36px;
+  }
+  
+  .delete-alarm-btn {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .delete-alarm-btn .icon {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .clickable-stock {
+    padding: 4px 6px;
+  }
+  
+  .alarm-symbol.clickable-stock {
+    font-size: 16px;
+  }
+  
+  .clickable-stock[data-symbol]::before {
+    display: none;
+  }
+  
+  .scroll-to-triggered-btn {
+    padding: 5px 7px;
+    font-size: 9px;
+    margin-left: 6px;
+    margin-right: 6px;
+  }
+  
+  .alert-toggle-container {
+    gap: 6px;
+    margin-left: 8px;
+  }
+  
+  .alert-toggle-label {
+    font-size: 10px;
+  }
+  
+  .alert-toggle-switch {
+    width: 40px;
+    height: 22px;
+  }
+  
+  .alert-toggle-slider {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .alert-toggle-switch.enabled .alert-toggle-slider {
+    transform: translateX(18px);
+  }
+}
+
+@media (max-width: 400px) {
+  .stock-name {
+    min-width: 45px;
+    font-size: 12px;
+  }
+  
+  .price-info {
+    width: 65px;
+    padding: 3px 5px;
+    gap: 1px;
+    right: 32px;
+  }
+  
+  .price {
+    font-size: 11px;
+    margin-bottom: 1px;
+  }
+  
+  .change {
+    font-size: 9px;
+    padding: 1px 2px;
+  }
+  
+  .delete-btn-right {
+    width: 20px;
+    height: 20px;
+    margin-left: 4px;
+  }
+  
+  .delete-btn-right .icon {
+    width: 9px;
+    height: 9px;
+  }
+  
+  .modal-content {
+    width: 95%;
+    max-height: 90%;
+  }
+  
+  .modal-header {
+    padding: 10px 14px;
+  }
+  
+  .modal-body {
+    padding: 14px;
+  }
+  
+  .alarm-item {
+    padding: 6px 0px;
+    min-height: 32px;
+  }
+  
+  .alarm-stock-name {
+    min-width: 40px;
+    font-size: 12px;
+    margin-right: 6px;
+  }
+  
+  .delete-alarm-btn {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .alarm-section-header {
+    font-size: 12px;
+  }
+  
+  .delete-all-btn {
+    padding: 6px 8px;
+    font-size: 10px;
+    min-width: 28px;
+    height: 28px;
+  }
+  
+  .alarm-price-info {
+    width: 85px;
+    padding: 5px 6px;
+    right: 26px;
+  }
+  
+  .alarm-target {
+    font-size: 11px;
+  }
+  
+  .alarm-date {
+    font-size: 8px;
+  }
+  
+  .delete-alarm-btn {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .delete-alarm-btn .icon {
+    width: 10px;
+    height: 10px;
+  }
+  
+  .scroll-to-triggered-btn {
+    display: none;
+  }
+  
+  .alert-toggle-container {
+    gap: 4px;
+    margin-left: 6px;
+  }
+  
+  .alert-toggle-label {
+    display: none;
+  }
+  
+  .alert-toggle-switch {
+    width: 36px;
+    height: 20px;
+  }
+  
+  .alert-toggle-slider {
+    width: 12px;
+    height: 12px;
+  }
+  
+  .alert-toggle-switch.enabled .alert-toggle-slider {
+    transform: translateX(16px);
+  }
+}
+
+.price-info .price:contains("Loading") {
+  color: #999;
+  animation: pulse 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes pulse {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+  </style>
+</head>
+<body>
+  <div id="watchlistView">
+    <div class="header">
+      <h2>Watchlists</h2>
+      <div class="actions">
+        <button id="newBtn">
+          <img src="Images/New.png" alt="New" class="icon">
+          <div class="tooltip">New Watchlist</div>
+        </button>
+        <button id="alarmBtn">
+          <img src="Images/alarm.png" alt="Alarm" class="icon">
+          <div class="tooltip">Price Alerts</div>
+        </button>
+        <button id="renameBtn">
+          <img src="Images/rename.png" alt="Rename" class="icon">
+          <div class="tooltip">Rename Watchlist</div>
+        </button>
+        <button id="deleteBtn">
+          <img src="Images/delete.png" alt="Delete" class="icon">
+          <div class="tooltip">Delete Watchlist</div>
+        </button>
+      </div>
+    </div>
+    <ul id="watchlistContainer" class="watchlist"></ul>
+  </div>
+
+  <div id="stocksView" style="display:none;">
+    <div class="header">
+      <button id="backBtn">
+        <img src="Images/Back.png" alt="Back" class="icon">
+        <div class="tooltip">Back</div>
+      </button>
+      <h2 id="watchlistTitle"></h2>
+      <div class="actions">
+        <input type="file" id="csvInput" accept=".csv" style="display:none;">
+        <button id="refreshBtn">
+          <img src="Images/Refresh.png" alt="Refresh" class="icon">
+        </button>
+        <button id="sortBtn">
+          <img src="Images/sort.png" alt="Sort" class="icon">
+          <div class="tooltip">Sort by % Change</div>
+        </button>
+        <button id="uploadBtn">
+          <img src="Images/upload.png" alt="Upload" class="icon">
+          <div class="tooltip">Upload CSV</div>
+        </button>
+        <button id="clearAllBtn">
+          <img src="Images/delete.png" alt="Clear All" class="icon">
+          <div class="tooltip">Clear All Stocks</div>
+        </button>
+      </div>
+    </div>
+    
+    <div class="search-container">
+      <input type="text" id="stockSearchInput" placeholder="Search stocks..." class="search-input">
+      <button id="clearSearchBtn" class="clear-search-btn" style="display:none;">&times;</button>
+    </div>
+    
+    <ul id="stocksContainer" class="watchlist"></ul>
+  </div>
+
+  <div id="alarmModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button id="closeAlarmModal" class="close-btn back-btn">
+          <img src="Images/Back.png" alt="Back" class="icon">
+        </button>
+        <h3>Price Alerts</h3>
+        <div class="alert-toggle-container">
+          <span class="alert-toggle-label">Alerts</span>
+          <div id="alertToggleSwitch" class="alert-toggle-switch enabled">
+            <div class="alert-toggle-slider"></div>
+          </div>
+        </div>
+        <button id="scrollToTriggeredBtn" class="scroll-to-triggered-btn" style="display: none;">
+          <img src="Images/alarm.png" alt="Scroll" class="icon">
+          Triggered
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="activeAlarmsSection" style="display: none;">
+          <div class="alarm-section-header-container">
+            <div class="alarm-section-header">Active Alerts</div>
+            <button id="deleteAllActiveBtn" class="delete-all-btn">
+              <img src="Images/delete.png" alt="Delete All" class="icon">
+            </button>
+          </div>
+          <ul id="activeAlarmsList" class="alarms-list"></ul>
+        </div>
+        
+        <div id="triggeredAlarmsSection" style="display: none;">
+          <div class="alarm-section-divider"></div>
+          <div class="alarm-section-header-container">
+            <div class="alarm-section-header">Triggered Alerts</div>
+            <button id="deleteAllTriggeredBtn" class="delete-all-btn">
+              <img src="Images/delete.png" alt="Delete All" class="icon">
+            </button>
+          </div>
+          <ul id="triggeredAlarmsList" class="alarms-list"></ul>
+        </div>
+        
+        <div class="no-alarms" id="noAlarmsMessage" style="display: none;">
+          <p>No active alerts</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="sidepanel.js"></script>
+</body>
+</html>

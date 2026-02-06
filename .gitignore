@@ -1,0 +1,12 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+.env
+
+# Dependencies
+node_modules/
+
+# Build artifacts (if any)
+dist/
+build/
