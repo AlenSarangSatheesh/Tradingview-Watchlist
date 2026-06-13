@@ -1,21 +1,33 @@
 {
   "manifest_version": 3,
-  "name": "TradingView Watchlist",
-  "description": "Side panel extension with TradingView style watchlist and stock view with real-time prices.",
-  "version": "2.5",
-  "permissions": ["storage", "sidePanel", "tabs", "contextMenus", "activeTab", "notifications", "alarms", "offscreen"],
+  "name": "Unlimited Watchlists for TradingView",
+  "description": "Unlimited TradingView watchlists in a side panel. One-click charts, plus CSV and Chartink screener import.",
+  "version": "1.0",
+  "permissions": ["storage", "sidePanel", "tabs"],
   "host_permissions": [
-    "https://query1.finance.yahoo.com/*",
-    "https://query2.finance.yahoo.com/*",
     "https://www.tradingview.com/*",
     "https://in.tradingview.com/*",
-    "https://*.tradingview.com/*"
+    "https://*.tradingview.com/*",
+    "https://chartink.com/*",
+    "https://www.chartink.com/*"
   ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Watchlist"
+    "default_title": "Watchlist",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "side_panel": {
     "default_path": "sidepanel.html"
@@ -23,9 +35,28 @@
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "https://www.tradingview.com/*",
+        "https://in.tradingview.com/*",
+        "https://*.tradingview.com/*"
       ],
       "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://chartink.com/screener/*",
+        "https://www.chartink.com/screener/*"
+      ],
+      "js": ["chartink-interceptor.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://chartink.com/screener/*",
+        "https://www.chartink.com/screener/*"
+      ],
+      "js": ["chartink.js"],
       "run_at": "document_idle"
     }
   ]

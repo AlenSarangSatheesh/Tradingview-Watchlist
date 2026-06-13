@@ -2,7 +2,7 @@
 
 // --- INITIALIZATION ---
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('TradingView Watchlist Extension Installed');
+  console.log('Unlimited Watchlists for TradingView Installed');
   initializeExtension();
 });
 
@@ -12,213 +12,128 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 function initializeExtension() {
-  chrome.storage.local.get(["watchlists", "alarmCheckingEnabled"], ({ watchlists, alarmCheckingEnabled }) => {
+  chrome.storage.local.get("watchlists", ({ watchlists }) => {
     if (!watchlists) chrome.storage.local.set({ watchlists: [] });
-    
-    const isEnabled = alarmCheckingEnabled !== undefined ? alarmCheckingEnabled : true;
-    if (alarmCheckingEnabled === undefined) chrome.storage.local.set({ alarmCheckingEnabled: true });
-
-    if (isEnabled) {
-      setupOffscreenDocument();
-    } else {
-      closeOffscreenDocument();
-    }
-  });
-
-  chrome.contextMenus.removeAll(() => {
-    if (chrome.runtime.lastError) return; 
-    chrome.contextMenus.create({
-      id: "alarm-context-menu",
-      title: "Set Price Alert (Manual)",
-      contexts: ["page"],
-      documentUrlPatterns: ["https://*.tradingview.com/*"]
-    });
-    chrome.contextMenus.create({
-      id: "alarm-cross-price",
-      title: "Add alert @ cross price",
-      contexts: ["page"],
-      documentUrlPatterns: ["https://*.tradingview.com/*"]
-    });
   });
 }
 
-// --- OFFSCREEN LIFECYCLE (Audio + Timer) ---
-async function setupOffscreenDocument() {
-  try {
-    const existingContexts = await chrome.runtime.getContexts({
-      contextTypes: ['OFFSCREEN_DOCUMENT']
-    });
+// --- WATCHLIST DEDUPE ---
+// Comparison-only form, kept in sync with canonicalSymbol in content.js: the same stock can
+// arrive as "M&M" (Chartink), "M_M"/"M-M" (TradingView) or "NSE:X" (CSV upload).
+const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^(NSE|BSE):/, '').replace(/[&_]/g, '-');
 
-    if (existingContexts.length > 0) return;
-
-    await chrome.offscreen.createDocument({
-      url: 'offscreen.html',
-      reasons: ['AUDIO_PLAYBACK', 'DOM_PARSER'], 
-      justification: 'Play alert sound and keep worker alive'
+// Drops canonical duplicates from every watchlist, keeping the first occurrence so the
+// stored notation (which the chart links rely on) is preserved.
+function dedupeWatchlists(watchlists) {
+  (watchlists || []).forEach((wl) => {
+    if (!Array.isArray(wl.stocks)) return;
+    const seen = new Set();
+    wl.stocks = wl.stocks.filter((s) => {
+      const c = canonicalSymbol(s);
+      if (seen.has(c)) return false;
+      seen.add(c);
+      return true;
     });
-    console.log('Monitoring & Audio System started.');
-  } catch (err) {
-    console.warn('Offscreen setup warning:', err);
-  }
-}
-
-async function closeOffscreenDocument() {
-  try {
-    const existingContexts = await chrome.runtime.getContexts({
-      contextTypes: ['OFFSCREEN_DOCUMENT']
-    });
-    
-    if (existingContexts.length > 0) {
-      await chrome.offscreen.closeDocument();
-      console.log('Monitoring stopped.');
-    }
-  } catch (err) {
-    console.warn('Offscreen closure warning:', err);
-  }
+  });
+  return watchlists;
 }
 
 // --- MESSAGE LISTENERS ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  // 1. Heartbeat from offscreen.js
-  if (request.action === 'keepAliveTick') {
-    checkAlarms();
-    return true;
-  }
-
-  // 2. Standard messages
   try {
     if (request.action === "openSidePanel") {
       if (sender.tab?.id) chrome.sidePanel.open({ tabId: sender.tab.id }).catch(() => {});
       sendResponse({ success: true });
-    } 
+    }
     else if (request.action === "getWatchlists") {
       chrome.storage.local.get("watchlists", ({ watchlists }) => sendResponse({ watchlists: watchlists || [] }));
-      return true; 
-    } 
+      return true;
+    }
     else if (request.action === "updateWatchlists") {
-      chrome.storage.local.set({ watchlists: request.watchlists }, () => {
-        chrome.runtime.sendMessage({ action: "refreshWatchlistUI" });
+      chrome.storage.local.set({ watchlists: dedupeWatchlists(request.watchlists) }, () => {
+        // Broadcast to the side panel; ignore "no receiver" when the panel is closed.
+        chrome.runtime.sendMessage({ action: "refreshWatchlistUI" }).catch(() => {});
         sendResponse({ success: true });
       });
       return true;
-    } 
-    else if (request.action === "setAlarmChecking") {
-      chrome.storage.local.set({ alarmCheckingEnabled: request.enabled }, () => {
-        if (request.enabled) setupOffscreenDocument(); 
-        else closeOffscreenDocument();
-        sendResponse({ success: true });
-      });
-      return true;
-    } 
-    else if (request.action === "getAlarmCheckingStatus") {
-      chrome.storage.local.get("alarmCheckingEnabled", ({ alarmCheckingEnabled }) => {
-        sendResponse({ enabled: alarmCheckingEnabled !== false });
-      });
+    }
+    else if (request.action === "importFromChartinkUrl") {
+      handleChartinkImport(request.url, request.mode).then(sendResponse);
       return true;
     }
   } catch (e) { console.error(e); }
 });
 
+// --- CHARTINK IMPORT (side-panel entry) ---
+// Locate or open the screener tab, wait for it to load, then ask its content script to
+// extract the screener and build the watchlist; relay the result back to the side panel.
+async function handleChartinkImport(url, mode) {
+  try {
+    if (!/^https?:\/\/(www\.)?chartink\.com\/screener\/.+/i.test(url || "")) {
+      return { success: false, error: "Invalid Chartink screener URL" };
+    }
+
+    const tabs = await chrome.tabs.query({
+      url: ["*://chartink.com/screener/*", "*://www.chartink.com/screener/*"]
+    });
+    let tab = tabs.find((t) => t.url && samePath(t.url, url));
+
+    if (!tab) {
+      tab = await chrome.tabs.create({ url, active: true });
+      await waitForTabComplete(tab.id);
+    } else if (tab.status !== "complete") {
+      await waitForTabComplete(tab.id);
+    }
+
+    return await sendImportMessage(tab.id, mode);
+  } catch (e) {
+    return { success: false, error: String((e && e.message) || e) };
+  }
+}
+
+function samePath(a, b) {
+  try {
+    return new URL(a).pathname.replace(/\/$/, "") === new URL(b).pathname.replace(/\/$/, "");
+  } catch (e) {
+    return false;
+  }
+}
+
+function waitForTabComplete(tabId, timeout = 20000) {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      chrome.tabs.onUpdated.removeListener(listener);
+      resolve();
+    };
+    const listener = (id, info) => { if (id === tabId && info.status === "complete") finish(); };
+    chrome.tabs.onUpdated.addListener(listener);
+    chrome.tabs.get(tabId, (t) => {
+      if (!chrome.runtime.lastError && t && t.status === "complete") finish();
+    });
+    setTimeout(finish, timeout);
+  });
+}
+
+function sendImportMessage(tabId, mode, attempts = 8) {
+  return new Promise((resolve) => {
+    const tryOnce = (n) => {
+      chrome.tabs.sendMessage(tabId, { action: "importScreener", mode }, (response) => {
+        if (chrome.runtime.lastError) {
+          if (n <= 0) return resolve({ success: false, error: "Could not reach the Chartink page. Open the screener and try again." });
+          setTimeout(() => tryOnce(n - 1), 700);
+        } else {
+          resolve(response || { success: false, error: "No response from the Chartink page." });
+        }
+      });
+    };
+    tryOnce(attempts);
+  });
+}
+
 // --- UI INTERACTIONS ---
 chrome.action.onClicked.addListener((tab) => {
-  if (tab?.id) chrome.sidePanel.open({ tabId: tab.id }).catch(() => {}); 
+  if (tab?.id) chrome.sidePanel.open({ tabId: tab.id }).catch(() => {});
 });
-
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  if (!tab?.id) return;
-  if (info.menuItemId === "alarm-context-menu") {
-    chrome.tabs.sendMessage(tab.id, { action: "showAlarmDialog" }).catch(() => {});
-  } else if (info.menuItemId === "alarm-cross-price") {
-    chrome.tabs.sendMessage(tab.id, { action: "addAlertAtCross" }).catch(() => {});
-  }
-});
-
-// --- PRICE LOGIC ---
-async function fetchStockPrice(symbol) {
-  try {
-    const response = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${symbol}.NS`, {
-      method: 'GET',
-      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' }
-    });
-    if (!response.ok) throw new Error('Failed');
-    const data = await response.json();
-    const result = data.chart.result[0];
-    if (!result?.meta) throw new Error('Invalid');
-    
-    const meta = result.meta;
-    const currentPrice = meta.regularMarketPrice || meta.previousClose;
-    
-    return { symbol: symbol, price: currentPrice.toFixed(2), timestamp: Date.now() };
-  } catch (error) { return { symbol: symbol, price: '--', error: true }; }
-}
-
-async function fetchMultipleStockPrices(symbols) {
-  const promises = symbols.map(symbol => fetchStockPrice(symbol));
-  const results = await Promise.allSettled(promises);
-  const priceData = {};
-  results.forEach((result, index) => {
-    priceData[symbols[index]] = result.status === 'fulfilled' ? result.value : { symbol: symbols[index], price: '--', error: true };
-  });
-  return priceData;
-}
-
-// --- ALARM CHECKER ---
-async function checkAlarms() {
-  const { alarms, alarmCheckingEnabled } = await chrome.storage.local.get(['alarms', 'alarmCheckingEnabled']);
-
-  if (alarmCheckingEnabled === false) { closeOffscreenDocument(); return; }
-  if (!alarms || alarms.length === 0) return;
-  
-  const symbols = [...new Set(alarms.map(a => a.symbol))];
-  const priceData = await fetchMultipleStockPrices(symbols);
-  
-  const triggeredAlarms = [];
-  const remainingAlarms = [];
-  
-  alarms.forEach((alarm) => {
-    const info = priceData[alarm.symbol];
-    if (!info || info.error) { remainingAlarms.push(alarm); return; }
-    
-    const current = parseFloat(info.price);
-    const target = parseFloat(alarm.price);
-    if (isNaN(current) || current <= 0) { remainingAlarms.push(alarm); return; }
-    
-    const tolerance = Math.max(target * 0.001, 0.01);
-    if (Math.abs(current - target) <= tolerance) {
-      triggeredAlarms.push({ ...alarm, currentPrice: current, triggeredAt: Date.now() });
-    } else {
-      remainingAlarms.push(alarm);
-    }
-  });
-  
-  if (triggeredAlarms.length > 0) {
-    await chrome.storage.local.set({ alarms: remainingAlarms });
-    const { triggeredAlarms: oldTriggered } = await chrome.storage.local.get('triggeredAlarms');
-    await chrome.storage.local.set({ triggeredAlarms: [...(oldTriggered || []), ...triggeredAlarms] });
-    
-    for (const alarm of triggeredAlarms) {
-      const message = `${alarm.symbol} hit target ₹${alarm.price}`;
-      
-      // 1. System Notification
-      chrome.notifications.create({
-        type: 'basic', iconUrl: 'Images/alarm.png', title: 'Price Alert',
-        message: message, priority: 2, requireInteraction: true
-      });
-
-      // 2. Play Sound (via Offscreen - FIXES AUDIO CONTEXT ERROR)
-      chrome.runtime.sendMessage({ action: "playAudioFromOffscreen" });
-
-      // 3. Show Toast ONLY on Active Tabs
-      const tabs = await chrome.tabs.query({ active: true });
-      for (const tab of tabs) {
-        if (tab.url && !tab.url.startsWith('chrome://')) {
-           chrome.tabs.sendMessage(tab.id, { 
-             action: "showGlobalToast", // Send toast command only
-             message: message, 
-             type: 'alert' 
-           }).catch(() => {});
-        }
-      }
-    }
-  }
-}

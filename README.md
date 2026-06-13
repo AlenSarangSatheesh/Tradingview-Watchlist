@@ -1,17 +1,18 @@
-# TradingView Unlimited Watchlists and Price Alerts
+# Unlimited Watchlists for TradingView
 
-A Chrome Extension that provides a powerful side panel watchlist for traders, featuring real-time stock prices, unlimited watchlists, and price alerts.
+A Chrome side-panel extension that lets traders organize an unlimited number of
+TradingView-style watchlists and jump straight to any symbol's chart on TradingView.
 
 ## Features
 
-- **Unlimited Watchlists**: Create and manage multiple watchlists with ease.
-- **Real-time Prices**: Fetches live stock prices using Yahoo Finance API.
-- **Price Alerts**: Set price alerts with audio and system notifications. 
-  - Supports "Cross Price" alerts.
-  - Background monitoring via offscreen documents.
-- **TradingView Integration**: Click on a stock to instantly open its chart on TradingView.
-- **CSV Import**: Easily import your watchlists via CSV files.
-- **Drag & Drop**: Reorder your watchlists and stocks with drag-and-drop functionality.
+- **Unlimited Watchlists**: Create and manage as many watchlists as you like.
+- **TradingView Integration**: Click a symbol to instantly open / switch its chart on TradingView.
+- **Add from TradingView**: A floating "Add to Watchlist" button on TradingView pages lets you add the current symbol to any of your watchlists.
+- **CSV Import**: Bulk-add symbols to a watchlist from a CSV file.
+- **Chartink Import**: Import every stock from a [Chartink](https://chartink.com) screener into a watchlist named after that screener. Use the "Import to Watchlist" button on the screener page, or the "Import from Chartink" button in the side panel (paste the screener URL). Re-importing the same screener overwrites that watchlist's contents.
+- **Search & Sort**: Filter symbols as you type, or sort a watchlist alphabetically (A–Z).
+- **Drag & Drop**: Reorder watchlists with drag-and-drop.
+- **Keyboard Shortcut**: Press `Space` to cycle to the next symbol in the active watchlist.
 - **Side Panel Interface**: Conveniently accessible from the browser side panel.
 
 ## Installation
@@ -26,20 +27,21 @@ A Chrome Extension that provides a powerful side panel watchlist for traders, fe
 
 1.  Open the extension from the Chrome side panel.
 2.  **Create Watchlist**: Click the "New" button to create a watchlist.
-3.  **Add Stocks**: Use the CSV import feature to bulk add stocks.
-4.  **Set Alerts**: Click the alarm icon next to a stock or use the context menu on TradingView pages to set alerts.
-5.  **View Charts**: Click on any stock symbol to open the corresponding TradingView chart.
+3.  **Add Stocks**: Use the CSV import button, the floating "Add to Watchlist" button on any TradingView page, or import a [Chartink](https://chartink.com) screener (see below).
+4.  **Import from Chartink**: Open a Chartink screener and click the "Import to Watchlist" button on the page, or click "Import from Chartink" in the side panel and paste the screener URL. All matching stocks are imported into a watchlist named after the screener.
+5.  **View Charts**: Click any symbol to open its chart on TradingView. Press `Space` to move to the next symbol.
 
 ## Permissions
 
 This extension requires the following permissions:
-- `storage`: To save watchlists and alerts.
+- `storage`: To save your watchlists locally.
 - `sidePanel`: To display the UI.
-- `alarms` & `notifications`: For price alerts.
-- `offscreen`: To play audio in the background.
-- `activeTab` & `tabs`: To interact with TradingView tabs.
-- Host permissions for `yahoo.com` and `tradingview.com`.
+- `tabs`: To open and switch TradingView chart tabs, and to open a Chartink screener tab when importing.
+- Host permissions for `tradingview.com` so the extension can update the chart symbol.
+- Host permissions for `chartink.com` so the extension can read a screener's results when you import it.
+
+Your watchlists are stored locally on your device. The only network requests the extension makes are to `chartink.com`, and only when you import a screener (to fetch that screener's stock list).
 
 ## Disclaimer
 
-This project is for educational purposes only. Stock prices may have a delay. Use at your own risk.
+This project is provided as-is for personal use. Use at your own risk.
