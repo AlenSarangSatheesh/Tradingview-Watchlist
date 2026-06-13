@@ -2,85 +2,17 @@
 (function() {
   'use strict';
 
-  if (window.tradingViewAlarmExtensionLoaded) return;
-  window.tradingViewAlarmExtensionLoaded = true;
+  if (window.tradingViewWatchlistExtensionLoaded) return;
+  window.tradingViewWatchlistExtensionLoaded = true;
 
-  // Detect if we are on a TradingView site for specific features
-  const isTradingView = location.hostname.includes('tradingview.com');
-
-  console.log(`TradingView Alarm Extension Loaded on ${location.hostname} (Global Toast Enabled)`);
+  console.log(`Unlimited Watchlists for TradingView loaded on ${location.hostname}`);
 
   let buttonContainer = null;
-  let alarmButton = null;
   let watchlistButton = null;
   let isDragging = false;
   let dragOffset = { x: 0, y: 0 };
   let containerPosition = { x: 20, y: 100 };
   let wasJustDragged = false;
-  let audioContext = null;
-
-  // ==========================================================
-  // 1. GLOBAL FEATURES (TOASTS, AUDIO, MESSAGE LISTENER)
-  //    These run on ANY website.
-  // ==========================================================
-
-  // --- AUDIO INIT ---
-  function initAudioContext() {
-    if (!audioContext) { try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
-  }
-  async function ensureAudioContextRunning() {
-    if (!audioContext) initAudioContext();
-    if (audioContext && audioContext.state === 'suspended') { try { await audioContext.resume(); } catch (e) {} }
-  }
-  document.addEventListener('click', initAudioContext, { once: true });
-  document.addEventListener('keydown', initAudioContext, { once: true });
-
-  // --- SOUND PLAY FUNCTION (LENGTHY SIREN ~4s) ---
-  function playAlertSound() {
-    if (!audioContext) initAudioContext();
-    if (audioContext && audioContext.state === 'suspended') {
-      audioContext.resume().catch(() => {});
-    }
-    
-    if (!audioContext) return; 
-
-    try {
-      const t = audioContext.currentTime;
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      // 'sawtooth' is sharper and naturally louder than 'sine'
-      oscillator.type = 'sawtooth'; 
-
-      // Duration of the siren (3 seconds)
-      const duration = 2.0;
-      
-      // Volume: Start loud, stay loud, fade out at very end
-      gainNode.gain.setValueAtTime(0.2, t); 
-      gainNode.gain.setValueAtTime(0.2, t + duration - 0.2); 
-      gainNode.gain.exponentialRampToValueAtTime(0.001, t + duration);
-
-      // Frequency Pattern: Emergency Siren (2 loops of High -> Low)
-      const cycles = 2; 
-      const step = duration / cycles;
-      
-      for (let i = 0; i < cycles; i++) {
-        const start = t + (i * step);
-        // Start High (1500Hz)
-        oscillator.frequency.setValueAtTime(1500, start); 
-        // Slide Low (800Hz)
-        oscillator.frequency.exponentialRampToValueAtTime(800, start + step); 
-      }
-
-      oscillator.start(t);
-      oscillator.stop(t + duration);
-    } catch (e) {
-      console.warn("Audio play failed", e);
-    }
-  }
 
   // --- GLOBAL TOAST FUNCTION ---
   function showGlobalToast(message, type = "info", duration = 4000) {
@@ -102,40 +34,14 @@
   // --- MESSAGE LISTENER ---
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
-      if (request.action === "showAlarmDialog") {
-        if(isTradingView) showAlarmDialog();
-      } 
-      else if (request.action === "addAlertAtCross") {
-        if(isTradingView) {
-          const symbol = extractCurrentSymbol();
-          const crossPrice = extractCrossHairPriceFromMenu(document.body) || extractCurrentPrice();
-          saveDirectAlert(symbol, crossPrice);
-        }
-      } 
-      else if (request.action === "showGlobalToast") {
-        showGlobalToast(request.message, request.type || "info", request.duration);
-      }
-      else if (request.action === "playAlarmSound") {
-        playAlertSound();
-        // Use the duration passed from background (8000ms), or default to 4000
-        if (request.message) showGlobalToast(request.message, "alert", request.duration || 4000);
-      }
-      else if (request.action === "changeSymbol") {
-        if(isTradingView) performSeamlessSwitch(request.symbol);
+      if (request.action === "changeSymbol") {
+        performSeamlessSwitch(request.symbol);
       }
     } catch(e) { console.error(e); }
     sendResponse({ success: true });
   });
 
-
-  // ==========================================================
-  // 2. TRADINGVIEW SPECIFIC FEATURES
-  //    These only run if we are on TradingView.
-  // ==========================================================
-  
-  if (!isTradingView) return; // STOP HERE if not on TradingView
-
-  // --- GLOBAL KEYBOARD SHORTCUTS (TV Only) ---
+  // --- GLOBAL KEYBOARD SHORTCUTS ---
   document.addEventListener('keydown', (e) => {
     // 1. Ignore if user is typing in a text box
     const tag = e.target.tagName.toLowerCase();
@@ -146,7 +52,7 @@
       // Stop TradingView's default behavior (which cycles their own watchlist)
       e.preventDefault();
       e.stopPropagation();
-      
+
       // Send signal to Side Panel to switch stock
       if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: "triggerSelectNextStock" }).catch(() => {
@@ -158,27 +64,10 @@
 
   // --- HELPER FUNCTIONS ---
   const normalizeSymbol = (s) => s.toUpperCase().replace(/_/g, '-');
-  const wait = (ms) => new Promise(r => setTimeout(r, ms));
-
-  // --- DIRECT SAVE FUNCTION ---
-  function saveDirectAlert(symbol, price) {
-    if (!chrome.runtime?.id) return;
-
-    if (!symbol || !price || isNaN(price) || price <= 0) {
-      showGlobalToast("Error: Could not detect valid price", "error");
-      return;
-    }
-    const s = normalizeSymbol(symbol);
-    const p = parseFloat(price);
-    chrome.storage.local.get('alarms', ({ alarms }) => {
-      if (!chrome.runtime?.id) return;
-      const arr = alarms || [];
-      arr.push({ symbol: s, type: 'touch', price: p, timestamp: Date.now() });
-      chrome.storage.local.set({ alarms: arr }, () => {
-        showGlobalToast(`Alert set for ${s} at ${p}`, "alert");
-      });
-    });
-  }
+  // Comparison-only form: unifies the notations the different sources store for the same
+  // stock ("M&M" from Chartink, "M_M"/"M-M" from TradingView, "NSE:X" from CSV uploads).
+  // Never stored — stored strings keep their original notation.
+  const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^(NSE|BSE):/, '').replace(/[&_]/g, '-');
 
   // --- GHOST MODE CSS ---
   const GHOST_STYLE_ID = 'tv-ghost-mode-style';
@@ -189,89 +78,22 @@
     const style = document.createElement('style');
     style.id = GHOST_STYLE_ID;
     style.textContent = `
-      body.${SWITCHING_CLASS} div[data-name="symbol-search-dialog-content"], 
-      body.${SWITCHING_CLASS} div[class*="dialog-"], 
+      body.${SWITCHING_CLASS} div[data-name="symbol-search-dialog-content"],
+      body.${SWITCHING_CLASS} div[class*="dialog-"],
       body.${SWITCHING_CLASS} div[data-dialog-name="Symbol Search"],
       body.${SWITCHING_CLASS} .tv-dialog,
-      body.${SWITCHING_CLASS} .tv-dialog__modal-wrap { 
-        opacity: 0 !important; 
-        visibility: visible !important; 
-        transition: none !important; 
-        animation: none !important; 
-        pointer-events: auto !important; 
+      body.${SWITCHING_CLASS} .tv-dialog__modal-wrap {
+        opacity: 0 !important;
+        visibility: visible !important;
+        transition: none !important;
+        animation: none !important;
+        pointer-events: auto !important;
         display: block !important;
       }
     `;
     document.head.appendChild(style);
   }
   setupGhostMode();
-
-  // --- MENU INJECTION LOGIC ---
-  function injectMenuItem(menuNode) {
-    if (menuNode.querySelector('#tv-custom-alert-item')) return;
-
-    const item = document.createElement('div');
-    item.id = 'tv-custom-alert-item';
-    item.setAttribute('data-role', 'menu-item');
-    item.style.cssText = `
-      cursor: pointer; 
-      padding: 8px 16px; 
-      color: #c0c0c0; 
-      font-size: 13px; 
-      display: flex; 
-      align-items: center; 
-      transition: background 0.1s; 
-      user-select: none; 
-      box-sizing: border-box; 
-      width: 100%;
-      border-bottom: 1px solid #333;
-    `;
-    
-    item.innerHTML = `
-      <div style="flex:1; font-weight:400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Add alert @ cross price</div>
-      <div style="width: 14px; text-align:center; font-size: 14px; opacity: 0.8;">🔔</div>
-    `;
-    
-    item.onmouseenter = () => { item.style.background = '#2a2e39'; item.style.color = '#fff'; };
-    item.onmouseleave = () => { item.style.background = 'transparent'; item.style.color = '#c0c0c0'; };
-    
-    item.onclick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const symbol = extractCurrentSymbol();
-      const crossPrice = extractCrossHairPriceFromMenu(menuNode) || extractCurrentPrice();
-      
-      document.body.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 0, clientY: 0 }));
-      
-      saveDirectAlert(symbol, crossPrice);
-    };
-
-    if (menuNode.firstChild) {
-      menuNode.insertBefore(item, menuNode.firstChild);
-    } else {
-      menuNode.appendChild(item);
-    }
-  }
-
-  // --- OBSERVER ---
-  const menuObserver = new MutationObserver((mutations) => {
-    if (!chrome.runtime?.id) return;
-    for (const m of mutations) {
-      for (const node of m.addedNodes) {
-        if (node.nodeType === 1) { 
-          const text = node.innerText || "";
-          if (text.includes("Reset chart view") && text.includes("Copy price")) {
-             let inner = node.querySelector('[data-name="menu-inner"]');
-             if (!inner) inner = node.querySelector('.scroll-wrap') || node.querySelector('.scrollable-content');
-             if (!inner && node.tagName === 'DIV' && node.textContent.includes('Reset')) inner = node;
-             if (inner) injectMenuItem(inner);
-          }
-        }
-      }
-    }
-  });
-  
-  menuObserver.observe(document.body, { childList: true, subtree: true });
 
   // --- FINDERS & SWITCHING ---
   function findSearchInput() {
@@ -309,20 +131,20 @@
       }
       input = await waitForSearchInput();
       if (!input) { document.body.classList.remove(SWITCHING_CLASS); return; }
-      
+
       const searchString = `NSE:${symbol}`;
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       setter.call(input, searchString);
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-      
+
       const checkResults = setInterval(() => {
         const item = document.querySelector('[data-role="list-item"]');
         if (item) { item.click(); clearInterval(checkResults); }
       }, 10);
       setTimeout(() => clearInterval(checkResults), 1000);
-    } catch (e) { console.warn("Switch issue:", e); } finally { 
-      setTimeout(() => document.body.classList.remove(SWITCHING_CLASS), 150); 
+    } catch (e) { console.warn("Switch issue:", e); } finally {
+      setTimeout(() => document.body.classList.remove(SWITCHING_CLASS), 150);
     }
   }
 
@@ -335,22 +157,7 @@
     return 'UNKNOWN';
   }
 
-  function extractCrossHairPriceFromMenu(scopeElement) {
-    const text = scopeElement.innerText || "";
-    const match = text.match(/Copy price\s+([0-9,.]+)/i);
-    if (match) return parseFloat(match[1].replace(/,/g, ''));
-    return null;
-  }
-
-  function extractCurrentPrice() {
-    const titleMatch = document.title.match(/^[A-Z0-9&\-._]+\s+([\d.,]+)/);
-    if (titleMatch) return parseFloat(titleMatch[1].replace(/,/g, ''));
-    const activeValues = document.querySelectorAll('[data-name="legend-last-value"]');
-    if (activeValues.length > 0) return parseFloat(activeValues[0].textContent.trim().replace(/,/g, ''));
-    return '';
-  }
-
-  // --- FLOATING BUTTONS (Pro UI) ---
+  // --- FLOATING BUTTON (Pro UI) ---
   function loadContainerPosition() {
     return new Promise((resolve) => {
       if (!chrome.runtime?.id) return resolve({ x: 20, y: 100 });
@@ -374,7 +181,7 @@
 
       buttonContainer = document.createElement('div');
       buttonContainer.id = 'tradingview-button-container';
-      
+
       buttonContainer.style.cssText = `
         position: fixed; top: ${containerPosition.y}px; left: ${containerPosition.x}px;
         display: flex; flex-direction: column; gap: 8px; z-index: 999999; cursor: grab;
@@ -383,15 +190,11 @@
         user-select: none; width: 110px;
       `;
 
-      alarmButton = createButton('Alert', 'Set Price Alert', '#FF9800', '#F57C00', '#000000', '🔔');
       watchlistButton = createButton('Add', 'Add to Watchlist', '#2962FF', '#1E88E5', '#FFFFFF', '📋');
+      watchlistButton.addEventListener('click', (e) => handleButtonClick(e));
 
-      alarmButton.addEventListener('click', (e) => handleButtonClick(e, 'alarm'));
-      watchlistButton.addEventListener('click', (e) => handleButtonClick(e, 'watchlist'));
-
-      buttonContainer.appendChild(alarmButton);
       buttonContainer.appendChild(watchlistButton);
-      
+
       setupDragEvents();
       document.body.appendChild(buttonContainer);
     }, 1000);
@@ -409,16 +212,16 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     `;
     btn.innerHTML = `<span style="font-size:15px; opacity:0.9;">${iconChar}</span> <span>${text}</span>`;
-    btn.onmouseenter = () => { 
-      if(!isDragging) { 
-        btn.style.background = hoverBg; 
+    btn.onmouseenter = () => {
+      if(!isDragging) {
+        btn.style.background = hoverBg;
         btn.style.transform = 'translateY(-1px)';
         btn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
       }
     };
-    btn.onmouseleave = () => { 
-      if(!isDragging) { 
-        btn.style.background = bg; 
+    btn.onmouseleave = () => {
+      if(!isDragging) {
+        btn.style.background = bg;
         btn.style.transform = 'translateY(0)';
         btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
       }
@@ -435,7 +238,7 @@
       buttonContainer.style.cursor = 'grabbing';
       buttonContainer.style.opacity = '0.9';
     };
-    
+
     document.onmousemove = (e) => {
       if (!isDragging) return;
       wasJustDragged = true;
@@ -445,7 +248,7 @@
       buttonContainer.style.left = x + 'px';
       buttonContainer.style.top = y + 'px';
     };
-    
+
     document.onmouseup = () => {
       if (!isDragging) return;
       isDragging = false;
@@ -457,7 +260,7 @@
     };
   }
 
-  function handleButtonClick(e, type) {
+  function handleButtonClick(e) {
     if (isDragging || wasJustDragged) {
       e.preventDefault();
       e.stopPropagation();
@@ -465,17 +268,18 @@
     }
     e.preventDefault();
     e.stopPropagation();
-    
-    if (type === 'alarm') showAlarmDialog();
-    if (type === 'watchlist') showWatchlistDialog();
+    showWatchlistDialog();
   }
 
-  // --- DIALOGS ---
-  function showAlarmDialog() { createAlarmDialog(extractCurrentSymbol(), extractCurrentPrice()); }
+  // --- DIALOG ---
   function showWatchlistDialog() { createWatchlistDialog(extractCurrentSymbol()); }
 
   function createWatchlistDialog(symbol) {
+    // Only one instance: a stacked second dialog would duplicate the wl-N checkbox ids,
+    // making label clicks toggle the hidden dialog's checkboxes.
+    document.getElementById('tv-ext-watchlist-dialog')?.remove();
     const backdrop = document.createElement('div');
+    backdrop.id = 'tv-ext-watchlist-dialog';
     backdrop.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif;`;
     const dialog = document.createElement('div');
     dialog.style.cssText = `background: #1e1e1e; color: #eee; padding: 24px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); min-width: 300px; max-width: 400px; max-height: 500px; border: 1px solid #333; display: flex; flex-direction: column;`;
@@ -503,23 +307,23 @@
       </div>
     `;
     backdrop.appendChild(dialog);
-    const closeBtn = dialog.querySelector('#watchlist-close'); 
-    const cancelBtn = dialog.querySelector('#watchlist-cancel'); 
+    const closeBtn = dialog.querySelector('#watchlist-close');
+    const cancelBtn = dialog.querySelector('#watchlist-cancel');
     const saveBtn = dialog.querySelector('#watchlist-save');
     const checkboxContainer = dialog.querySelector('#watchlist-checkboxes');
-    
+
     const closeDialog = () => { if(document.body.contains(backdrop)) document.body.removeChild(backdrop); };
-    closeBtn.onclick = closeDialog; 
+    closeBtn.onclick = closeDialog;
     cancelBtn.onclick = closeDialog;
     backdrop.onclick = (e) => { if(e.target === backdrop) closeDialog(); };
-    
+
     if (chrome.runtime?.id) {
       chrome.runtime.sendMessage({ action: "getWatchlists" }, (res) => {
         const list = res.watchlists || [];
         if(!list.length) { checkboxContainer.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">No watchlists found.</div>'; saveBtn.disabled = true; return; }
-        const normalized = normalizeSymbol(symbol);
+        const canonical = canonicalSymbol(symbol);
         checkboxContainer.innerHTML = list.map((wl, i) => {
-          const checked = wl.stocks && wl.stocks.some(s => normalizeSymbol(s) === normalized);
+          const checked = wl.stocks && wl.stocks.some(s => canonicalSymbol(s) === canonical);
           return `
             <div class="tv-ext-wl-item" style="display: flex; align-items: center; padding: 8px; border-radius: 4px; transition: background 0.2s;">
               <input type="checkbox" id="wl-${i}" ${checked ? 'checked' : ''} style="margin-right: 10px; transform: scale(1.2); accent-color: #4caf50;">
@@ -529,16 +333,18 @@
         }).join('');
       });
     }
-    
+
     saveBtn.onclick = () => {
       if (!chrome.runtime?.id) return;
+      saveBtn.disabled = true; // a second click would race a second read-modify-write
       const s = normalizeSymbol(dialog.querySelector('#watchlist-symbol').value.trim());
+      const target = canonicalSymbol(s);
       chrome.runtime.sendMessage({ action: "getWatchlists" }, (res) => {
         let change = false;
         res.watchlists.forEach((wl, i) => {
           const chk = dialog.querySelector(`#wl-${i}`);
           if(!chk) return;
-          const idx = wl.stocks ? wl.stocks.findIndex(x => normalizeSymbol(x) === s) : -1;
+          const idx = wl.stocks ? wl.stocks.findIndex(x => canonicalSymbol(x) === target) : -1;
           if(chk.checked && idx === -1) { if(!wl.stocks) wl.stocks=[]; wl.stocks.push(s); change=true; }
           if(!chk.checked && idx !== -1) { wl.stocks.splice(idx, 1); change=true; }
         });
@@ -546,50 +352,6 @@
         if(change) chrome.runtime.sendMessage({ action: "updateWatchlists", watchlists: res.watchlists }, () => showGlobalToast("Watchlists updated", "info"));
       });
     };
-    document.body.appendChild(backdrop);
-  }
-
-  function createAlarmDialog(symbol, defaultPrice = '') {
-    const backdrop = document.createElement('div');
-    backdrop.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif;`;
-    const dialog = document.createElement('div');
-    dialog.style.cssText = `background: #1e1e1e; color: #eee; padding: 24px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); min-width: 300px; max-width: 400px; border: 1px solid #333;`;
-    dialog.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;"><h3 style="margin: 0; color: #fff; font-size: 18px;">Set Price Alert</h3><button id="alarm-close" style="background: none; border: none; color: #999; font-size: 20px; cursor: pointer; padding: 0;">&times;</button></div>
-      <div style="margin-bottom: 16px;"><label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 14px;">Symbol:</label><input type="text" id="alarm-symbol" value="${symbol}" style="width: 100%; padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; box-sizing: border-box;" /></div>
-      <div style="margin-bottom: 20px;"><label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 14px;">Target Price:</label><input type="number" id="alarm-price" step="0.01" min="0" placeholder="Enter price" value="${defaultPrice}" style="width: 100%; padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; box-sizing: border-box;" /></div>
-      <div style="display: flex; gap: 12px; justify-content: flex-end;"><button id="alarm-cancel" style="padding: 8px 16px; background: #444; border: none; border-radius: 4px; color: #eee; cursor: pointer;">Cancel</button><button id="alarm-save" style="padding: 8px 16px; background: #0057ff; border: none; border-radius: 4px; color: white; cursor: pointer;">Set Alert</button></div>`;
-    backdrop.appendChild(dialog);
-    
-    const closeDialog = () => { if(document.body.contains(backdrop)) document.body.removeChild(backdrop); };
-    dialog.querySelector('#alarm-close').onclick = closeDialog;
-    dialog.querySelector('#alarm-cancel').onclick = closeDialog;
-    backdrop.onclick = (e) => { if(e.target === backdrop) closeDialog(); };
-    
-    dialog.querySelector('#alarm-save').onclick = () => {
-      try {
-        if (!chrome.runtime?.id) return;
-        const s = normalizeSymbol(dialog.querySelector('#alarm-symbol').value.trim());
-        const p = parseFloat(dialog.querySelector('#alarm-price').value);
-        if(!s || !p || p<=0) return alert('Invalid input');
-        
-        chrome.storage.local.get('alarms', ({ alarms }) => {
-          const arr = alarms || [];
-          arr.push({ symbol: s, type: 'touch', price: p, timestamp: Date.now() });
-          chrome.storage.local.set({ alarms: arr }, () => { 
-            closeDialog(); 
-            showGlobalToast(`Alert set for ${s}`, "alert"); 
-          });
-        });
-      } catch (e) {
-        console.error("Error saving alarm:", e);
-        closeDialog(); 
-      }
-    };
-    
-    const pInput = dialog.querySelector('#alarm-price');
-    pInput.onkeypress = (e) => { if(e.key === 'Enter') dialog.querySelector('#alarm-save').click(); };
-    setTimeout(() => { pInput.focus(); pInput.select(); }, 100);
     document.body.appendChild(backdrop);
   }
 
