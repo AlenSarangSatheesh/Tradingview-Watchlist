@@ -4,18 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Unlimited Watchlists for TradingView — Free Chrome Extension</title>
-  <meta name="description" content="Unlimited TradingView watchlists in a side panel. One-click charts, plus CSV and Chartink screener import. Free, private, no account needed.">
+  <meta name="description" content="Get unlimited TradingView watchlists with a free Chrome extension. Import stocks from Chartink screeners or CSV, open charts with one click. No account, no tracking.">
   <link rel="canonical" href="https://alensarangsatheesh.github.io/Tradingview-Watchlist/">
-  <meta name="theme-color" content="#0a0c10">
 
   <meta property="og:type" content="website">
   <meta property="og:title" content="Unlimited Watchlists for TradingView — Free Chrome Extension">
-  <meta property="og:description" content="Unlimited TradingView watchlists in a side panel. One-click charts, plus CSV and Chartink screener import. Free, private, no account needed.">
+  <meta property="og:description" content="Get unlimited TradingView watchlists with a free Chrome extension. Import stocks from Chartink screeners or CSV, open charts with one click.">
   <meta property="og:url" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/">
   <meta property="og:image" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/promo-marquee.png">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Unlimited Watchlists for TradingView — Free Chrome Extension">
-  <meta name="twitter:description" content="Unlimited TradingView watchlists in a side panel. One-click charts, plus CSV and Chartink screener import. Free, private, no account needed.">
+  <meta name="twitter:description" content="Get unlimited TradingView watchlists with a free Chrome extension. Import stocks from Chartink screeners or CSV, open charts with one click.">
   <meta name="twitter:image" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/promo-marquee.png">
 
   <link rel="icon" type="image/png" sizes="16x16" href="assets/img/icon16.png">
@@ -25,397 +24,307 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="assets/css/site.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Unlimited Watchlists for TradingView",
+    "operatingSystem": "Chrome",
+    "applicationCategory": "BrowserApplication",
+    "description": "A free Chrome side-panel extension that gives you unlimited TradingView watchlists. Import stocks from Chartink screeners or CSV files and open any chart on TradingView with one click.",
+    "url": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/",
+    "image": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/promo-marquee.png",
+    "installUrl": "https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "author": { "@type": "Person", "name": "Alen Sarang Satheesh" }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Is the extension free?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes — completely free, with no premium tier, no ads, and no account required." }
+      },
+      {
+        "@type": "Question",
+        "name": "How do I get more watchlists on TradingView's free plan?",
+        "acceptedAnswer": { "@type": "Answer", "text": "TradingView's free plan limits how many watchlists you can create. This extension keeps its own watchlists in a Chrome side panel, so you can create as many as you want and still open every chart on TradingView with one click — on any TradingView plan, including the free one." }
+      },
+      {
+        "@type": "Question",
+        "name": "How does the Chartink import work?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Open any screener on chartink.com and click the Import to Watchlist button the extension adds to the page. All result symbols are saved into a watchlist named after the screener. The list keeps the screener's URL, so you can re-sync it with one click whenever the scan results change." }
+      },
+      {
+        "@type": "Question",
+        "name": "Where is my data stored? Do watchlists sync between devices?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Everything is stored locally in your browser using Chrome's storage.local API. Nothing is uploaded anywhere, which also means watchlists don't sync between devices. You can export a list to CSV and import it on another machine." }
+      },
+      {
+        "@type": "Question",
+        "name": "What data does the extension collect?",
+        "acceptedAnswer": { "@type": "Answer", "text": "None. No analytics, no tracking, no accounts. The only network requests it makes are to chartink.com (when you import or re-sync a screener) and tradingview.com (when you open a chart)." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is this affiliated with TradingView or Chartink?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. This is an independent tool built by an individual developer. It is not affiliated with, endorsed by, or sponsored by TradingView or Chartink." }
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
 
   <header class="site-header">
-    <div class="wrap nav">
+    <div class="wrap">
       <a class="brand" href="index.html">
-        <img src="assets/img/icon48.png" alt="" width="28" height="28">
-        <span>Unlimited Watchlists</span>
+        <img src="assets/img/icon48.png" alt="" width="26" height="26">
+        Unlimited Watchlists
       </a>
-      <nav class="nav-links">
+      <nav aria-label="Main">
         <a href="#features">Features</a>
         <a href="#chartink">Chartink import</a>
-        <a href="#how">How it works</a>
-        <a href="#screenshots">Screenshots</a>
         <a href="#faq">FAQ</a>
         <a href="privacy.html">Privacy</a>
-        <a class="btn btn-primary btn-sm" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome</a>
+        <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome</a>
       </nav>
     </div>
   </header>
 
   <main>
 
-    <!-- ============================ HERO ============================ -->
     <section class="hero">
-      <div class="hero-glow" aria-hidden="true"></div>
-      <div class="wrap">
-        <span class="badge reveal"><span class="dot"></span>Now live on the Chrome Web Store</span>
-        <h1 class="reveal" style="--reveal-delay:.05s">
-          <span class="grad">Unlimited watchlists</span><br>for TradingView
-        </h1>
-        <p class="lead reveal" style="--reveal-delay:.1s">
-          A lightweight Chrome side panel for every symbol you track. Import stocks from
-          Chartink screeners or CSV, organize as many watchlists as you want, and open any
-          chart on TradingView with a single click.
-        </p>
-        <div class="hero-ctas reveal" style="--reveal-delay:.15s">
-          <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
-            Add to Chrome — it's free
-          </a>
-          <a class="btn btn-ghost" href="#how">See how it works</a>
+      <div class="wrap hero-grid">
+        <div>
+          <h1>Unlimited watchlists for TradingView</h1>
+          <p class="lead">
+            A free Chrome extension that keeps all your watchlists in the browser side
+            panel — no TradingView watchlist limit. Import stocks from Chartink screeners
+            or CSV files, and open any chart with one click.
+          </p>
+          <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome — Free</a>
+          <p class="hero-note">No account. No tracking. Works with TradingView's free plan.</p>
+          <ul class="chips">
+            <li>Unlimited watchlists</li>
+            <li>Chartink import</li>
+            <li>CSV import &amp; export</li>
+            <li>Data stays local</li>
+          </ul>
         </div>
-        <p class="hero-note reveal" style="--reveal-delay:.2s">No account · No tracking · Press <kbd>Space</kbd> to cycle symbols</p>
-
-        <div class="hero-shot reveal" style="--reveal-delay:.25s">
-          <div class="frame">
-            <div class="frame-bar">
-              <span class="dots"><span></span><span></span><span></span></span>
-              <span class="url">tradingview.com/chart</span>
-            </div>
-            <img src="assets/img/hero-chart-panel.png" alt="The Unlimited Watchlists side panel open next to a TradingView chart, with a symbol selected and its chart loaded" width="1919" height="1028">
-          </div>
-        </div>
+        <figure class="hero-img shot">
+          <img src="assets/img/hero-chart-panel.png" alt="The Unlimited Watchlists side panel open next to a TradingView chart, with a symbol selected and its chart loaded" width="1919" height="1028">
+        </figure>
       </div>
     </section>
 
-    <!-- ============================ TRUST ============================ -->
-    <section class="trust">
+    <section id="features">
       <div class="wrap">
-        <div class="trust-row reveal">
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            Free forever
-          </div>
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="17" y1="8" x2="22" y2="13"/><line x1="22" y1="8" x2="17" y2="13"/></svg>
-            No account needed
-          </div>
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="12" x2="2" y2="12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" y1="16" x2="6.01" y2="16"/><line x1="10" y1="16" x2="10.01" y2="16"/></svg>
-            Data stays on your device
-          </div>
-          <div class="trust-item">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-            Built on Manifest V3
-          </div>
+        <div class="section-head">
+          <h2>Everything a watchlist should do</h2>
+          <p>TradingView's free plan caps your watchlists — this side panel doesn't. Build as many as your strategy needs.</p>
         </div>
-      </div>
-    </section>
-
-    <!-- ============================ FEATURES ============================ -->
-    <section class="section" id="features">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <span class="eyebrow">Features</span>
-          <h2>Everything a watchlist should do.<br>Without the limits.</h2>
-          <p>TradingView caps your watchlists — this side panel doesn't. Build as many as your strategy needs.</p>
-        </div>
-
         <div class="features-grid">
-          <div class="feature-card reveal">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></span>
+          <div class="card">
             <h3>Unlimited watchlists</h3>
             <p>Create, rename, reorder and delete as many watchlists as you need — right in the browser side panel.</p>
           </div>
-          <div class="feature-card reveal" style="--reveal-delay:.05s">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg></span>
+          <div class="card">
             <h3>One-click charts</h3>
-            <p>Click any symbol to instantly open or switch its chart on TradingView. Press <kbd>Space</kbd> to cycle through the list.</p>
+            <p>Click any symbol to open or switch its chart on TradingView. Press <kbd>Space</kbd> to cycle through the list.</p>
           </div>
-          <div class="feature-card reveal" style="--reveal-delay:.1s">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg></span>
-            <h3>Import from Chartink</h3>
+          <div class="card">
+            <h3>Chartink screener import</h3>
             <p>Pull every stock from a Chartink screener into a watchlist named after that screener — one button on the screener page.</p>
           </div>
-          <div class="feature-card reveal">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></span>
+          <div class="card">
             <h3>One-click re-sync</h3>
-            <p>Imported screeners remember their Chartink URL. Hit the re-sync button anytime to refresh the list with today's results.</p>
+            <p>Imported screeners remember their Chartink URL. Re-sync anytime to refresh the list with today's results.</p>
           </div>
-          <div class="feature-card reveal" style="--reveal-delay:.05s">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></span>
-            <h3>CSV import</h3>
-            <p>Bulk-add symbols from a CSV file. Imports create or update a watchlist named after the file.</p>
+          <div class="card">
+            <h3>CSV import &amp; export</h3>
+            <p>Bulk-add symbols from a CSV file, or export a watchlist to move it to another machine.</p>
           </div>
-          <div class="feature-card reveal" style="--reveal-delay:.1s">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
+          <div class="card">
             <h3>Search, sort &amp; drag</h3>
             <p>Filter symbols as you type, sort A–Z, and reorder watchlists or stocks with drag-and-drop.</p>
           </div>
-          <div class="feature-card reveal">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span>
-            <h3>Dark &amp; light themes</h3>
-            <p>Match your TradingView setup. Switch themes from Settings — your choice is remembered.</p>
-          </div>
-          <div class="feature-card reveal" style="--reveal-delay:.05s">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg></span>
+          <div class="card">
             <h3>Add from TradingView</h3>
             <p>A floating "Add to Watchlist" button on TradingView pages saves the current symbol to any of your lists.</p>
           </div>
-          <div class="feature-card reveal" style="--reveal-delay:.1s">
-            <span class="feature-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+          <div class="card">
+            <h3>Dark &amp; light themes</h3>
+            <p>Match your TradingView setup. Your choice is remembered.</p>
+          </div>
+          <div class="card">
             <h3>Private by design</h3>
-            <p>Your watchlists never leave your device. No accounts, no analytics, no ads — ever.</p>
+            <p>Your watchlists never leave your device. No accounts, no analytics, no ads.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ============================ CHARTINK SPOTLIGHT ============================ -->
-    <section class="section" id="chartink">
-      <div class="wrap">
-        <div class="section-head reveal">
-          <span class="eyebrow">Chartink → TradingView</span>
-          <h2>From Chartink screener to TradingView chart in seconds</h2>
-          <p>Stop copying symbols by hand. Turn any Chartink scan into a living watchlist.</p>
-        </div>
-
-        <div class="spotlight">
-          <div class="spot-steps">
-            <div class="spot-step reveal">
-              <span class="spot-num"></span>
-              <div>
-                <h3>Open any Chartink screener</h3>
-                <p>Run your scan on chartink.com as usual. The extension adds an <strong>Import to Watchlist</strong> button right next to Chartink's own toolbar.</p>
-              </div>
-            </div>
-            <div class="spot-step reveal" style="--reveal-delay:.08s">
-              <span class="spot-num"></span>
-              <div>
-                <h3>Click "Import to Watchlist"</h3>
-                <p>Every stock in the results is captured — including all pages — and saved into a watchlist named after the screener.</p>
-              </div>
-            </div>
-            <div class="spot-step reveal" style="--reveal-delay:.16s">
-              <span class="spot-num"></span>
-              <div>
-                <h3>Re-sync whenever you like</h3>
-                <p>The watchlist remembers its screener. One click on the re-sync icon pulls in today's fresh results — no re-importing.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="spot-visual reveal" style="--reveal-delay:.1s">
-            <div class="spot-strip">
-              <img src="assets/img/chartink-toolbar.png" alt="Chartink screener toolbar with the Import to Watchlist button added by the extension" width="1170" height="97" loading="lazy">
-            </div>
-            <div class="frame">
-              <div class="frame-bar">
-                <span class="dots"><span></span><span></span><span></span></span>
-                <span class="url">chartink.com/screener</span>
-              </div>
-              <img src="assets/img/chartink-screener.png" alt="A Chartink screener results table with the Import to Watchlist button" width="640" height="400" loading="lazy">
-            </div>
-          </div>
+    <section id="chartink">
+      <div class="wrap split split-reverse">
+        <figure class="shot">
+          <img src="assets/img/chartink-screener.png" alt="A Chartink screener results table with the Import to Watchlist button added by the extension" width="1280" height="800" loading="lazy">
+          <figcaption>The Import to Watchlist button on a Chartink screener.</figcaption>
+        </figure>
+        <div>
+          <h2>Import Chartink screeners into TradingView watchlists</h2>
+          <p>Stop copying symbols by hand. The extension adds an <strong>Import to Watchlist</strong> button to every screener page on chartink.com:</p>
+          <ol>
+            <li><strong>Run your scan</strong> on Chartink as usual.</li>
+            <li><strong>Click Import to Watchlist.</strong> Every stock in the results — including all pages — is saved into a watchlist named after the screener.</li>
+            <li><strong>Re-sync whenever you like.</strong> The watchlist remembers its screener URL, so one click pulls in today's fresh results.</li>
+          </ol>
         </div>
       </div>
     </section>
 
-    <!-- ============================ HOW IT WORKS ============================ -->
-    <section class="section" id="how">
+    <section id="how">
       <div class="wrap">
-        <div class="section-head reveal">
-          <span class="eyebrow">How it works</span>
+        <div class="section-head">
           <h2>Up and running in under a minute</h2>
         </div>
         <div class="steps-grid">
-          <div class="step-card reveal">
-            <div class="step-n">STEP 1</div>
-            <h3>Open the side panel</h3>
-            <p>Install the extension and open it from Chrome's side panel — it sits beside any tab you're on.</p>
+          <div class="card">
+            <span class="step-n">1</span>
+            <h3>Install the extension</h3>
+            <p>Open it from Chrome's side panel — it sits beside any tab you're on.</p>
           </div>
-          <div class="step-card reveal" style="--reveal-delay:.06s">
-            <div class="step-n">STEP 2</div>
+          <div class="card">
+            <span class="step-n">2</span>
             <h3>Create a watchlist</h3>
-            <p>Click the + button to create a list. Make one per strategy, sector, or timeframe — there's no cap.</p>
+            <p>Make one per strategy, sector, or timeframe — there's no cap.</p>
           </div>
-          <div class="step-card reveal" style="--reveal-delay:.12s">
-            <div class="step-n">STEP 3</div>
+          <div class="card">
+            <span class="step-n">3</span>
             <h3>Add your symbols</h3>
-            <p>Import from a Chartink screener or CSV file, or use the floating Add button on any TradingView page.</p>
+            <p>From a Chartink screener, a CSV file, or the Add button on any TradingView page.</p>
           </div>
-          <div class="step-card reveal" style="--reveal-delay:.18s">
-            <div class="step-n">STEP 4</div>
+          <div class="card">
+            <span class="step-n">4</span>
             <h3>Fly through charts</h3>
-            <p>Click a symbol to open its TradingView chart. Press <kbd>Space</kbd> to jump to the next one in the list.</p>
+            <p>Click a symbol to open its chart. Press <kbd>Space</kbd> to jump to the next one.</p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ============================ SCREENSHOTS ============================ -->
-    <section class="section" id="screenshots">
+    <section id="screenshots">
       <div class="wrap">
-        <div class="section-head reveal">
-          <span class="eyebrow">Screenshots</span>
+        <div class="section-head">
           <h2>Take a look around</h2>
           <p>Light or dark — the panel stays out of your way and next to your charts.</p>
         </div>
-
-        <div class="gallery-top">
-          <figure class="shot reveal">
-            <div class="frame">
-              <div class="frame-bar"><span class="dots"><span></span><span></span><span></span></span></div>
-              <img src="assets/img/panel-chart-dark.png" alt="Dark-themed side panel with a populated watchlist next to a TradingView chart" width="960" height="600" loading="lazy">
-            </div>
-            <figcaption>The side panel and your chart, side by side</figcaption>
+        <figure class="shot shot-wide">
+          <img src="assets/img/panel-chart-dark.png" alt="Dark-themed side panel with a populated watchlist next to a TradingView chart" width="1280" height="800" loading="lazy">
+          <figcaption>Dark theme, side by side with your chart.</figcaption>
+        </figure>
+        <div class="shot-row">
+          <figure class="shot">
+            <img src="assets/img/panel-watchlists-light.png" alt="Light-themed watchlists overview with re-sync buttons on Chartink-imported lists" width="467" height="965" loading="lazy">
+            <figcaption>All your lists — re-sync Chartink imports anytime.</figcaption>
           </figure>
-          <figure class="shot reveal" style="--reveal-delay:.08s">
-            <div class="frame">
-              <div class="frame-bar"><span class="dots"><span></span><span></span><span></span></span></div>
-              <img src="assets/img/add-to-watchlist-dialog.png" alt="Add to Watchlist dialog on a TradingView chart, selecting which watchlists to save the symbol to" width="1280" height="800" loading="lazy">
-            </div>
-            <figcaption>Save the current symbol to any list</figcaption>
+          <figure class="shot">
+            <img src="assets/img/panel-stocks-light.png" alt="Light-themed stock list inside a watchlist with search, sort, export and delete controls" width="480" height="1021" loading="lazy">
+            <figcaption>Search, sort and manage symbols.</figcaption>
           </figure>
-        </div>
-
-        <div class="gallery-panels">
-          <figure class="shot reveal">
-            <div class="frame">
-              <img src="assets/img/panel-watchlists-light.png" alt="Light-themed watchlists overview with re-sync buttons on Chartink-imported lists" width="465" height="965" loading="lazy">
-            </div>
-            <figcaption>All your lists — re-sync Chartink imports anytime</figcaption>
-          </figure>
-          <figure class="shot reveal" style="--reveal-delay:.08s">
-            <div class="frame">
-              <img src="assets/img/panel-stocks-light.png" alt="Light-themed stock list inside a watchlist with search, sort, export and delete controls" width="480" height="1021" loading="lazy">
-            </div>
-            <figcaption>Search, sort and manage symbols</figcaption>
-          </figure>
-          <figure class="shot reveal" style="--reveal-delay:.16s">
-            <div class="frame">
-              <img src="assets/img/settings-light.png" alt="Settings dialog with dark and light appearance toggle and a feedback button" width="465" height="967" loading="lazy">
-            </div>
-            <figcaption>Switch themes, send feedback</figcaption>
+          <figure class="shot">
+            <img src="assets/img/add-to-watchlist-dialog.png" alt="Add to Watchlist dialog on a TradingView chart, selecting which watchlists to save the symbol to" width="1280" height="800" loading="lazy">
+            <figcaption>Save the current symbol to any list.</figcaption>
           </figure>
         </div>
       </div>
     </section>
 
-    <!-- ============================ FAQ ============================ -->
-    <section class="section" id="faq">
+    <section id="faq">
       <div class="wrap">
-        <div class="section-head reveal">
-          <span class="eyebrow">FAQ</span>
+        <div class="section-head">
           <h2>Frequently asked questions</h2>
         </div>
-
         <div class="faq-list">
-          <details class="faq-item reveal">
-            <summary>Is the extension free?
-              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-body">
-              <p>Yes — completely free, with no premium tier, no ads, and no account required. Unlimited means unlimited.</p>
-            </div>
-          </details>
+          <h3>Is the extension free?</h3>
+          <p>Yes — completely free, with no premium tier, no ads, and no account required.</p>
 
-          <details class="faq-item reveal">
-            <summary>Where is my data stored? Do watchlists sync between devices?
-              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-body">
-              <p>Everything is stored locally in your browser using Chrome's <code>storage.local</code> API. Nothing is uploaded anywhere, which also means watchlists don't sync between devices. You can export a list to CSV and import it on another machine.</p>
-            </div>
-          </details>
+          <h3>How do I get more watchlists on TradingView's free plan?</h3>
+          <p>
+            TradingView's free plan limits how many watchlists you can create. This extension keeps
+            its own watchlists in a Chrome side panel, so you can create as many as you want and
+            still open every chart on TradingView with one click — on any TradingView plan,
+            including the free one.
+          </p>
 
-          <details class="faq-item reveal">
-            <summary>Does it work with a free TradingView account?
-              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-body">
-              <p>Yes. The extension simply opens and switches standard TradingView chart pages, so it works with any TradingView plan — including the free one. That's the point: TradingView's free plan limits your watchlists, this extension doesn't.</p>
-            </div>
-          </details>
+          <h3>How does the Chartink import work?</h3>
+          <p>
+            Open any screener on chartink.com and click the <strong>Import to Watchlist</strong>
+            button the extension adds to the page. All result symbols are saved into a watchlist
+            named after the screener. The list keeps the screener's URL, so you can re-sync it with
+            one click whenever the scan results change.
+          </p>
 
-          <details class="faq-item reveal">
-            <summary>How does the Chartink import work?
-              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-body">
-              <p>Open any screener on chartink.com and click the <strong>Import to Watchlist</strong> button the extension adds to the page. All result symbols are saved into a watchlist named after the screener. The list keeps the screener's URL, so you can re-sync it with one click whenever the scan results change.</p>
-            </div>
-          </details>
+          <h3>Where is my data stored? Do watchlists sync between devices?</h3>
+          <p>
+            Everything is stored locally in your browser using Chrome's <code>storage.local</code>
+            API. Nothing is uploaded anywhere, which also means watchlists don't sync between
+            devices. You can export a list to CSV and import it on another machine.
+          </p>
 
-          <details class="faq-item reveal">
-            <summary>What data does the extension collect?
-              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-body">
-              <p>None. No analytics, no tracking, no accounts. The only network requests it makes are to chartink.com (when you import or re-sync a screener) and tradingview.com (when you open a chart). Read the full <a href="privacy.html">Privacy Policy</a>.</p>
-            </div>
-          </details>
+          <h3>What data does the extension collect?</h3>
+          <p>
+            None. No analytics, no tracking, no accounts. The only network requests it makes are to
+            chartink.com (when you import or re-sync a screener) and tradingview.com (when you open
+            a chart). Read the full <a href="privacy.html">Privacy Policy</a>.
+          </p>
 
-          <details class="faq-item reveal">
-            <summary>Is this affiliated with TradingView or Chartink?
-              <svg class="chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
-            </summary>
-            <div class="faq-body">
-              <p>No. This is an independent tool built by an individual developer. It is not affiliated with, endorsed by, or sponsored by TradingView or Chartink. All trademarks belong to their respective owners.</p>
-            </div>
-          </details>
+          <h3>Is this affiliated with TradingView or Chartink?</h3>
+          <p>
+            No. This is an independent tool built by an individual developer. It is not affiliated
+            with, endorsed by, or sponsored by TradingView or Chartink. All trademarks belong to
+            their respective owners.
+          </p>
         </div>
       </div>
     </section>
 
-    <!-- ============================ FINAL CTA ============================ -->
-    <section class="section">
+    <section>
       <div class="wrap">
-        <div class="cta-band reveal">
-          <h2>Your watchlists, without the limits.</h2>
+        <div class="cta-band">
+          <h2>Your watchlists, without the limits</h2>
           <p>Free, private, and one click away from your next chart.</p>
-          <a class="btn btn-primary" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="21.17" y1="8" x2="12" y2="8"/><line x1="3.95" y1="6.06" x2="8.54" y2="14"/><line x1="10.88" y1="21.94" x2="15.46" y2="14"/></svg>
-            Add to Chrome — it's free
-          </a>
+          <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome — Free</a>
         </div>
       </div>
     </section>
 
   </main>
 
-  <!-- ============================ FOOTER ============================ -->
   <footer class="site-footer">
     <div class="wrap">
-      <div class="footer-inner">
-        <div class="dev">Developed by <strong>Alen Sarang Satheesh</strong></div>
-        <nav class="footer-links">
+      <div class="footer-row">
+        <div>Developed by <strong>Alen Sarang Satheesh</strong></div>
+        <nav aria-label="Footer">
           <a href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Chrome Web Store</a>
           <a href="privacy.html">Privacy Policy</a>
-          <a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&source=mailto&to=alensarangsatheesh@gmail.com&su=Unlimited%20Watchlists%20for%20TradingView%20%E2%80%93%20Feedback" target="_blank" rel="noopener">Contact / Feedback</a>
+          <a href="mailto:alensarangsatheesh@gmail.com?subject=Unlimited%20Watchlists%20for%20TradingView%20%E2%80%93%20Feedback">Contact / Feedback</a>
         </nav>
       </div>
-      <p class="footer-disclaimer">
+      <p class="disclaimer">
         Not affiliated with, endorsed by, or sponsored by TradingView or Chartink.
         TradingView and Chartink are trademarks of their respective owners.
       </p>
     </div>
   </footer>
 
-  <script>
-    (function () {
-      var els = document.querySelectorAll('.reveal');
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !('IntersectionObserver' in window)) {
-        els.forEach(function (el) { el.classList.add('in'); });
-        return;
-      }
-      var io = new IntersectionObserver(function (entries) {
-        entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('in');
-            io.unobserve(entry.target);
-          }
-        });
-      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-      els.forEach(function (el) { io.observe(el); });
-    })();
-  </script>
 </body>
 </html>
