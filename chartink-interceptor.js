@@ -19,13 +19,17 @@
   // From a screener JSON response, extract every nsecode (fallback bsecode) and stash it.
   function stashSymbols(json) {
     try {
-      if (!json || !Array.isArray(json.data) || !json.data.length) return;
+      if (!json || !Array.isArray(json.data)) return;
+      if (json.data.length === 0) {
+        if (document.documentElement) document.documentElement.dataset.ctkSymbols = "[]";
+        return;
+      }
       const first = json.data[0];
       if (!first || (!('nsecode' in first) && !('bsecode' in first))) return;
       const syms = json.data
         .map((r) => (r.nsecode || r.bsecode || '').toString().trim().toUpperCase())
         .filter(Boolean);
-      if (syms.length && document.documentElement) {
+      if (document.documentElement) {
         document.documentElement.dataset.ctkSymbols = JSON.stringify(syms);
       }
     } catch (e) {}

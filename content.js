@@ -5,7 +5,7 @@
   if (window.tradingViewWatchlistExtensionLoaded) return;
   window.tradingViewWatchlistExtensionLoaded = true;
 
-  console.log(`Unlimited Watchlists for TradingView loaded on ${location.hostname}`);
+
 
   let buttonContainer = null;
   let watchlistButton = null;
@@ -62,6 +62,7 @@
     }
   }, true); // "true" uses Capture Phase to intercept before TradingView sees it
 
+
   // --- HELPER FUNCTIONS ---
   const normalizeSymbol = (s) => s.toUpperCase().replace(/_/g, '-');
   // Comparison-only form: unifies the notations the different sources store for the same
@@ -97,11 +98,25 @@
 
   // --- FINDERS & SWITCHING ---
   function findSearchInput() {
-    let input = document.querySelector('[data-role="search"]');
-    if (input) return input;
-    if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') return document.activeElement;
-    const dialog = document.querySelector('[data-name="symbol-search-dialog-content"]');
-    if (dialog) return dialog.querySelector('input');
+    const selectors = [
+      '[data-role="search"]',
+      '[data-name="symbol-search-dialog-content"] input',
+      '.tv-dialog__modal-wrap input[type="text"]'
+    ];
+    
+    for (const selector of selectors) {
+      const elements = document.querySelectorAll(selector);
+      for (const el of elements) {
+        if (el.tagName === 'INPUT' && el.getBoundingClientRect().width > 0) {
+          return el;
+        }
+      }
+    }
+    
+    if (document.activeElement && document.activeElement.tagName === 'INPUT' && document.activeElement.type === 'text') {
+      return document.activeElement;
+    }
+    
     return null;
   }
   function waitForSearchInput() {
@@ -132,29 +147,70 @@
       input = await waitForSearchInput();
       if (!input) { document.body.classList.remove(SWITCHING_CLASS); return; }
 
-      const searchString = `NSE:${symbol}`;
-      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-      setter.call(input, searchString);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+      // Crucial: Focus the input so TradingView accepts the Enter key
+      // especially if the user clicked the side panel and the iframe lost focus.
+      input.focus();
 
-      const checkResults = setInterval(() => {
-        const item = document.querySelector('[data-role="list-item"]');
-        if (item) { item.click(); clearInterval(checkResults); }
-      }, 10);
-      setTimeout(() => clearInterval(checkResults), 1000);
+      const searchString = symbol.includes(':') ? symbol : `NSE:${symbol}`;
+      const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      
+      // Wait a tiny bit for the input to be fully ready
+      await new Promise(r => setTimeout(r, 100));
+
+      // We use a safe retry loop. We press Enter, then wait up to 2 seconds for the dialog to close.
+      // We do NOT spam Enter, as that causes TradingView to leak WebSocket quote subscriptions.
+      for (let i = 0; i < 3; i++) {
+        if (!document.body.contains(input) || input.getBoundingClientRect().width === 0) break;
+        
+        // Ensure the value is set correctly
+        if (input.value !== searchString) {
+          if (setter) setter.call(input, searchString);
+          else input.value = searchString;
+          input.dispatchEvent(new Event('input', { bubbles: true }));
+          input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+        
+        // Dispatch Enter just ONCE per retry attempt
+        input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+        input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+        
+        // Wait up to 2 seconds for the dialog to close before trying again
+        let closed = false;
+        for (let w = 0; w < 20; w++) {
+          await new Promise(r => setTimeout(r, 100));
+          if (!document.body.contains(input) || input.getBoundingClientRect().width === 0) {
+            closed = true;
+            break;
+          }
+        }
+        if (closed) break;
+      }
+
     } catch (e) { console.warn("Switch issue:", e); } finally {
-      setTimeout(() => document.body.classList.remove(SWITCHING_CLASS), 150);
+      document.body.classList.remove(SWITCHING_CLASS);
     }
   }
 
   // --- EXTRACTION ---
   function extractCurrentSymbol() {
+    let titleSymbol = 'UNKNOWN';
     const titleMatch = document.title.match(/^([A-Z0-9&\-._]+)\s/);
-    if (titleMatch) return titleMatch[1];
-    const urlMatch = location.href.match(/symbol=(?:NSE|BSE)%3A([A-Z0-9&%\-._]+)/i);
-    if (urlMatch) return decodeURIComponent(urlMatch[1]).replace(/%26/g, '&');
-    return 'UNKNOWN';
+    if (titleMatch) titleSymbol = titleMatch[1].toUpperCase();
+
+    // Prioritize URL extraction to maintain the exchange prefix (e.g. BSE:TCS)
+    // ONLY if the base symbol matches the current title symbol.
+    const urlMatch = location.href.match(/symbol=([^&]+)/i);
+    if (urlMatch) {
+      const decoded = decodeURIComponent(urlMatch[1]);
+      if (decoded.includes(':')) {
+        const urlBaseSym = decoded.split(':')[1].toUpperCase();
+        if (urlBaseSym === titleSymbol) {
+            return decoded.toUpperCase();
+        }
+      }
+    }
+
+    return titleSymbol;
   }
 
   // --- FLOATING BUTTON (Pro UI) ---
@@ -355,13 +411,15 @@
     document.body.appendChild(backdrop);
   }
 
-  addButtons();
-  let lastUrl = location.href;
-  new MutationObserver(() => {
-    if (location.href !== lastUrl) {
-      lastUrl = location.href;
-      setTimeout(() => { if (!document.getElementById('tradingview-button-container')) addButtons(); }, 2000);
-    }
-  }).observe(document, { subtree: true, childList: true });
+  if (window.self === window.top) {
+    addButtons();
+    let lastUrl = location.href;
+    new MutationObserver(() => {
+      if (location.href !== lastUrl) {
+        lastUrl = location.href;
+        setTimeout(() => { if (!document.getElementById('tradingview-button-container')) addButtons(); }, 2000);
+      }
+    }).observe(document, { subtree: true, childList: true });
+  }
 
 })();

@@ -14,11 +14,11 @@
   function getStashedSymbols() {
     try {
       const raw = document.documentElement.dataset.ctkSymbols;
-      if (!raw) return [];
+      if (!raw) return null;
       const arr = JSON.parse(raw);
       return Array.isArray(arr) ? arr : [];
     } catch (e) {
-      return [];
+      return null;
     }
   }
 
@@ -40,7 +40,7 @@
   }
 
   function hasResults() {
-    return getStashedSymbols().length > 0 || !!document.querySelector('table tbody tr td');
+    return getStashedSymbols() !== null || !!document.querySelector('table tbody tr td') || document.body.innerText.includes('No stocks present');
   }
 
   function waitFor(pred, timeout, interval) {
@@ -86,7 +86,7 @@
   // Fallback 2: read the rendered table's "Symbol" column (visible rows only).
   function fetchSymbolsViaDom() {
     const table = document.querySelector('table');
-    if (!table) return [];
+    if (!table) return document.body.innerText.includes('No stocks present') ? [] : null;
     const headers = Array.from(table.querySelectorAll('thead th, thead td'));
     const symIdx = headers.findIndex((h) => /^\s*symbol\s*$/i.test(h.textContent.trim()));
 
@@ -119,7 +119,7 @@
         const watchlists = res.watchlists || [];
         // Match by screener URL first (survives renames), then by name.
         const existing = watchlists.find((w) => w.chartinkUrl === pageUrl) ||
-                         watchlists.find((w) => w.name === name);
+                         watchlists.find((w) => w.name === name && !w.chartinkUrl);
         let savedName = name;
         if (existing) {
           existing.stocks = symbols;            // overwrite contents
@@ -144,14 +144,15 @@
 
     // Prefer the full list captured from the screener's response; then replay; then DOM.
     let symbols = getStashedSymbols();
-    if (!symbols.length) { const r = await fetchSymbolsViaReplay(); if (r) symbols = r; }
-    if (!symbols.length) symbols = fetchSymbolsViaDom();
-    symbols = Array.from(new Set((symbols || []).map((s) => s.trim().toUpperCase()).filter(Boolean)));
+    if (symbols === null) { const r = await fetchSymbolsViaReplay(); if (r !== null) symbols = r; }
+    if (symbols === null) symbols = fetchSymbolsViaDom();
 
-    if (!symbols.length) {
+    if (symbols === null) {
       showToast('No stocks found. Make sure the screener results have loaded, then retry.', 'error');
       return { success: false, error: 'no-data' };
     }
+
+    symbols = Array.from(new Set(symbols.map((s) => s.trim().toUpperCase()).filter(Boolean)));
 
     // mode 'symbols': just hand the list back (caller decides where to put it).
     if (opts.mode === 'symbols') {

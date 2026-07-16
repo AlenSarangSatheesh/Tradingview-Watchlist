@@ -55,7 +55,7 @@ body.light {
 body {
   font-family: Arial, sans-serif;
   margin: 0;
-  padding: 0 0 30px 0;
+  padding: 0;
   background: var(--bg);
   color: var(--text);
 }
@@ -82,6 +82,11 @@ body {
 h2 {
   margin: 0;
   font-size: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  padding: 0 10px;
 }
 
 /* Search container styling */
@@ -216,6 +221,13 @@ h2 {
   margin-top: 5px;
 }
 
+/* Align tooltips to the right for right-aligned buttons to prevent screen cut-off */
+.actions button .tooltip {
+  left: auto;
+  right: 0;
+  transform: none;
+}
+
 .actions button:hover .tooltip,
 #backBtn:hover .tooltip {
   opacity: 1;
@@ -229,13 +241,13 @@ h2 {
 
 /* Stock list item styling */
 .watchlist li {
-  padding: 8px 10px;
+  padding: 6px 10px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 40px;
+  min-height: 34px;
   position: relative;
   transition: background 0.2s ease;
 }
@@ -550,20 +562,7 @@ h2 {
   filter: brightness(1.1);
 }
 
-/* Footer */
-.app-footer {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--footer-bg);
-  border-top: 1px solid var(--border);
-  color: var(--footer-text);
-  font-size: 11px;
-  text-align: center;
-  padding: 6px 8px;
-  z-index: 90;
-}
+
 
 .watchlist li.hidden {
   display: none;
@@ -585,6 +584,131 @@ h2 {
     width: 9px;
     height: 9px;
   }
+}
+
+/* Stock Tags & Notes */
+.stock-tag-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.stock-note-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+.watchlist li.active .stock-note-text {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Context Menu */
+.context-menu {
+  position: fixed;
+  background: var(--menu-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.5);
+  z-index: 4000;
+  padding: 10px;
+  display: none;
+  width: 170px;
+}
+.context-menu.show {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.color-picker {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+.color-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  transition: transform 0.15s ease;
+}
+.color-dot:hover {
+  transform: scale(1.15);
+}
+.color-dot.selected {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+.grid-btn {
+  background: transparent;
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+.grid-btn:hover {
+  background: var(--hover);
+}
+.grid-btn.active {
+  background: #2962FF;
+  border-color: #2962FF;
+  color: #FFF;
+}
+.tf-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  padding: 2px 4px;
+  font-size: 11px;
+  outline: none;
+}
+.note-input {
+  width: 100%;
+  padding: 6px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-2);
+  border-radius: 3px;
+  color: var(--text);
+  font-size: 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+.note-input:focus {
+  border-color: var(--focus);
+}
+.context-menu-actions {
+  display: flex;
+  justify-content: space-between;
+}
+.context-menu-btn {
+  background: var(--btn-bg);
+  color: var(--text);
+  border: none;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.context-menu-btn:hover {
+  background: var(--btn-hover);
+}
+.context-menu-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.context-menu-btn.primary:hover {
+  filter: brightness(1.1);
 }
   </style>
 </head>
@@ -665,6 +789,21 @@ h2 {
             <button id="themeLight" class="theme-opt">Light</button>
           </div>
         </div>
+
+        <div class="settings-row" style="align-items: flex-start; flex-direction: column; gap: 8px;">
+          <span class="settings-label">Keyboard Shortcuts</span>
+          <span style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+            Press <kbd style="background: var(--btn-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-2); font-family: monospace; font-size: 11px;">Space</kbd> on a TradingView chart to quickly cycle to the next stock in your open watchlist.
+          </span>
+        </div>
+        <div class="settings-section">
+          <span class="settings-label" style="display:block; margin-bottom: 8px;">Data Management</span>
+          <div style="display: flex; gap: 8px; justify-content: space-between;">
+            <button id="backupDataBtn" style="flex: 1; background: var(--btn-bg); color: var(--text); border: 1px solid var(--border-2); padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.2s;">Backup All Data</button>
+            <button id="restoreDataBtn" style="flex: 1; background: var(--btn-bg); color: var(--text); border: 1px solid var(--border-2); padding: 8px; border-radius: 4px; cursor: pointer; font-size: 12px; transition: background 0.2s;">Restore Data</button>
+            <input type="file" id="restoreFileInput" accept=".json" style="display:none;">
+          </div>
+        </div>
         <div class="settings-section">
           <p class="settings-note">Found a bug or have a feature idea? Let the developer know.</p>
           <a id="feedbackLink" class="settings-mail" target="_blank" rel="noopener"
@@ -672,11 +811,30 @@ h2 {
              Report a problem / Suggest a feature
           </a>
         </div>
+        <div class="settings-section" style="text-align: center; margin-top: 15px; border-top: none; font-size: 11px;">
+          <span style="color: var(--text-muted);">Developed by</span> <a href="https://mail.google.com/mail/u/0/?fs=1&tf=cm&source=mailto&to=alensarangsatheesh@gmail.com" target="_blank" rel="noopener" style="color: var(--text-muted); text-decoration: underline;">Alen Sarang Satheesh</a>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="app-footer">Developed by Alen Sarang Satheesh</div>
+  <div id="stockContextMenu" class="context-menu">
+    <div style="font-size: 12px; font-weight: bold; margin-bottom: 2px;" id="ctxMenuTitle">Tag Stock</div>
+    <div class="color-picker" id="ctxColorPicker">
+      <div class="color-dot" data-color="" style="background: transparent; border: 1px dashed var(--border-2);" title="Clear Color"></div>
+      <div class="color-dot" data-color="#FFFFFF" style="background: #FFFFFF; border: 1px solid var(--border-2);"></div>
+      <div class="color-dot" data-color="#F44336" style="background: #F44336;"></div>
+      <div class="color-dot" data-color="#4CAF50" style="background: #4CAF50;"></div>
+      <div class="color-dot" data-color="#2196F3" style="background: #2196F3;"></div>
+      <div class="color-dot" data-color="#FFEB3B" style="background: #FFEB3B;"></div>
+      <div class="color-dot" data-color="#9C27B0" style="background: #9C27B0;"></div>
+    </div>
+    <input type="text" id="ctxNoteInput" class="note-input" placeholder="Add note (max 25)" maxlength="25">
+    <div class="context-menu-actions">
+      <button id="ctxClearBtn" class="context-menu-btn">Clear All</button>
+      <button id="ctxSaveBtn" class="context-menu-btn primary">Save</button>
+    </div>
+  </div>
 
   <script src="sidepanel.js"></script>
 </body>
