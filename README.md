@@ -1,7 +1,13 @@
 # Unlimited Watchlists for TradingView
 
-A Chrome side-panel extension that lets traders organize an unlimited number of
-TradingView-style watchlists and jump straight to any symbol's chart on TradingView.
+A free Chrome extension that gives you **unlimited TradingView watchlists** in the
+browser side panel — no TradingView watchlist limit, no account, no tracking. Import
+stocks from [Chartink](https://chartink.com) screeners or CSV files and open any
+symbol's chart on TradingView with one click. Works with TradingView's free plan.
+
+- **Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei)
+- **Website:** [alensarangsatheesh.github.io/Tradingview-Watchlist](https://alensarangsatheesh.github.io/Tradingview-Watchlist/)
+- **Privacy policy:** [privacy.html](https://alensarangsatheesh.github.io/Tradingview-Watchlist/privacy.html)
 
 ## Features
 
