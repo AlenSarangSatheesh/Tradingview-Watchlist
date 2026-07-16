@@ -42,8 +42,22 @@ function dedupeWatchlists(watchlists) {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
     if (request.action === "openSidePanel") {
-      if (sender.tab?.id) chrome.sidePanel.open({ tabId: sender.tab.id }).catch(() => {});
+      if (sender.tab?.id) chrome.sidePanel.open({ tabId: sender.tab.id }).catch(() => { });
       sendResponse({ success: true });
+    }
+    else if (request.action === "saveBseNameMap") {
+      if (request.nameMap) {
+        chrome.storage.local.get("bse_name_map", ({ bse_name_map }) => {
+          const currentMap = bse_name_map || {};
+          const newMap = { ...currentMap, ...request.nameMap };
+          chrome.storage.local.set({ bse_name_map: newMap }, () => {
+            sendResponse({ success: true });
+          });
+        });
+        return true;
+      } else {
+        sendResponse({ success: false });
+      }
     }
     else if (request.action === "getWatchlists") {
       chrome.storage.local.get("watchlists", ({ watchlists }) => sendResponse({ watchlists: watchlists || [] }));
@@ -52,7 +66,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     else if (request.action === "updateWatchlists") {
       chrome.storage.local.set({ watchlists: dedupeWatchlists(request.watchlists) }, () => {
         // Broadcast to the side panel; ignore "no receiver" when the panel is closed.
-        chrome.runtime.sendMessage({ action: "refreshWatchlistUI" }).catch(() => {});
+        chrome.runtime.sendMessage({ action: "refreshWatchlistUI" }).catch(() => { });
         sendResponse({ success: true });
       });
       return true;
@@ -61,6 +75,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       handleChartinkImport(request.url, request.mode).then(sendResponse);
       return true;
     }
+
   } catch (e) { console.error(e); }
 });
 
@@ -81,7 +96,8 @@ async function handleChartinkImport(url, mode) {
     if (!tab) {
       tab = await chrome.tabs.create({ url, active: true });
       await waitForTabComplete(tab.id);
-    } else if (tab.status !== "complete") {
+    } else {
+      await chrome.tabs.update(tab.id, { url, active: true });
       await waitForTabComplete(tab.id);
     }
 
@@ -135,5 +151,5 @@ function sendImportMessage(tabId, mode, attempts = 8) {
 
 // --- UI INTERACTIONS ---
 chrome.action.onClicked.addListener((tab) => {
-  if (tab?.id) chrome.sidePanel.open({ tabId: tab.id }).catch(() => {});
+  if (tab?.id) chrome.sidePanel.open({ tabId: tab.id }).catch(() => { });
 });
