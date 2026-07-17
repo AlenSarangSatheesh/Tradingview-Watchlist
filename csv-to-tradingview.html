@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Import a CSV Watchlist into TradingView</title>
+  <meta name="description" content="Turn a CSV of stock symbols — from a broker, screener, or spreadsheet — into a TradingView watchlist. Step-by-step guide using a free Chrome side-panel extension.">
+  <link rel="canonical" href="https://alensarangsatheesh.github.io/Tradingview-Watchlist/csv-to-tradingview.html">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="How to Import a CSV Watchlist into TradingView">
+  <meta property="og:description" content="Turn a CSV of stock symbols into a TradingView watchlist — free, one click, no plan limits.">
+  <meta property="og:url" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/csv-to-tradingview.html">
+  <meta property="og:image" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/promo-marquee.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/img/icon16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/icon32.png">
+  <link rel="apple-touch-icon" href="assets/img/icon128.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="assets/css/site.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Import a CSV Watchlist into TradingView",
+    "description": "Turn a CSV of stock symbols — from a broker, screener, or spreadsheet — into a TradingView watchlist. Step-by-step guide using a free Chrome side-panel extension.",
+    "author": { "@type": "Person", "name": "Alen Sarang Satheesh" },
+    "datePublished": "2026-07-17",
+    "dateModified": "2026-07-17",
+    "image": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/promo-marquee.png",
+    "mainEntityOfPage": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/csv-to-tradingview.html"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/" },
+      { "@type": "ListItem", "position": 2, "name": "CSV to TradingView" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Does this import into my TradingView account?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No — and that's deliberate. The list lives in the browser side panel, which is why no plan limit applies. Clicking a symbol opens its chart on tradingview.com; your account's own watchlists are untouched." }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need exchange prefixes like NSE: in the file?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. The extension is built with Indian markets in mind: plain symbols open on NSE by default, numeric BSE scrip codes are recognized automatically, and NSE: or BSE: prefixes are respected if your file already has them. Files exported from brokers and screeners can be used without editing." }
+      },
+      {
+        "@type": "Question",
+        "name": "Is there a size limit?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No practical one — thousands of symbols across any number of lists are fine. Each file becomes (or updates) its own watchlist." }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="assets/img/icon48.png" alt="" width="26" height="26">
+        Unlimited Watchlists
+      </a>
+      <nav aria-label="Main">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#faq">FAQ</a>
+        <a href="privacy.html">Privacy</a>
+        <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+    <p class="crumbs"><a href="index.html">Home</a> › Guides</p>
+    <h1>How to import a CSV watchlist into TradingView</h1>
+    <p class="updated">Updated July 17, 2026</p>
+
+    <p>
+      Symbol lists tend to live in files: a broker's holdings export, a screener's results, a
+      spreadsheet you've curated for years. Getting that file into TradingView usually means
+      re-typing symbols one by one — or fighting with exchange prefixes and plan limits. Here's the
+      faster way.
+    </p>
+
+    <h2>What TradingView supports natively</h2>
+    <p>
+      TradingView's watchlist menu can import a plain text list of symbols, but it expects
+      exchange-prefixed tickers (like <code>NSE:RELIANCE</code>), and whatever you import still
+      counts against your plan's watchlist and symbol caps — on the free plan, that's a single list
+      (see <a href="tradingview-watchlist-limit.html">the watchlist-limit guide</a>). If your file
+      is a plain CSV from a broker or screener, you'll be cleaning it up in a spreadsheet first.
+    </p>
+
+    <h2>The one-click alternative</h2>
+    <p>
+      <a href="index.html">Unlimited Watchlists for TradingView</a> — a free Chrome extension —
+      imports a CSV straight into a side-panel watchlist and opens any symbol's TradingView chart
+      with one click. No plan limits, no prefix formatting, no cleanup.
+    </p>
+
+    <ol>
+      <li><strong>Open the side panel</strong> and choose <strong>Import from CSV</strong> from the import menu.</li>
+      <li><strong>Pick your file.</strong> A new watchlist is created, named after the file — or, if you import from inside an open watchlist, the symbols are added to it.</li>
+      <li><strong>Click any symbol</strong> to open its chart on TradingView; press <kbd>Space</kbd> to cycle through the list.</li>
+    </ol>
+
+    <figure class="shot">
+      <img src="assets/img/panel-stocks-light.png" alt="A stock list inside the side panel with search, sort, export and delete controls" width="480" height="1021" loading="lazy">
+      <figcaption>An imported list in the side panel — search, sort, export.</figcaption>
+    </figure>
+
+    <h2>What the CSV needs to look like</h2>
+    <p>Almost nothing — the importer is deliberately forgiving:</p>
+    <ul>
+      <li>One symbol per row, in the <strong>first column</strong>. Extra columns (price, notes, whatever your broker adds) are ignored.</li>
+      <li>A header row like <code>Symbol</code> or <code>Ticker</code> is detected and skipped automatically.</li>
+      <li>Quotes are stripped, symbols are uppercased, and duplicates are removed for you.</li>
+    </ul>
+    <p>So a file as simple as this works as-is:</p>
+    <div class="callout">
+      <p><code>Symbol</code><br><code>RELIANCE</code><br><code>TCS</code><br><code>HDFCBANK</code><br><code>INFY</code></p>
+    </div>
+
+    <h2>Export works too</h2>
+    <p>
+      Any watchlist can be exported back to CSV from the side panel — useful for backups, sharing a
+      list, or moving your watchlists to another computer (import the file there and you're done).
+    </p>
+
+    <h2>Frequently asked questions</h2>
+
+    <h3>Does this import into my TradingView account?</h3>
+    <p>
+      No — and that's deliberate. The list lives in the browser side panel, which is why no plan
+      limit applies. Clicking a symbol opens its chart on tradingview.com; your account's own
+      watchlists are untouched.
+    </p>
+
+    <h3>Do I need exchange prefixes like NSE: in the file?</h3>
+    <p>
+      No. The extension is built with Indian markets in mind: plain symbols open on NSE by default,
+      numeric BSE scrip codes are recognized automatically, and <code>NSE:</code> or
+      <code>BSE:</code> prefixes are respected if your file already has them. Files exported from
+      brokers and screeners can be used without editing.
+    </p>
+
+    <h3>Is there a size limit?</h3>
+    <p>
+      No practical one — thousands of symbols across any number of lists are fine. Each file becomes
+      (or updates) its own watchlist.
+    </p>
+
+    <div class="cta-band">
+      <h2>Your CSV, charted in seconds</h2>
+      <p>Free, private, no plan limits.</p>
+      <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome — Free</a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-row">
+        <div>Developed by <strong>Alen Sarang Satheesh</strong></div>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="tradingview-watchlist-limit.html">Watchlist limit</a>
+          <a href="chartink-to-tradingview.html">Chartink to TradingView</a>
+          <a href="privacy.html">Privacy Policy</a>
+        </nav>
+      </div>
+      <p class="disclaimer">
+        Not affiliated with, endorsed by, or sponsored by TradingView or Chartink.
+        TradingView and Chartink are trademarks of their respective owners.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
