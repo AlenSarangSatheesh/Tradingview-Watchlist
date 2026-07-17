@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>How to Import a Chartink Screener into TradingView (2026)</title>
+  <meta name="description" content="Get Chartink screener results into TradingView watchlists — manual copy-paste, or a free Chrome extension that imports and re-syncs any scan in one click.">
+  <link rel="canonical" href="https://alensarangsatheesh.github.io/Tradingview-Watchlist/chartink-to-tradingview.html">
+
+  <meta property="og:type" content="article">
+  <meta property="og:title" content="How to Import a Chartink Screener into TradingView (2026)">
+  <meta property="og:description" content="Two ways to get Chartink screener results into TradingView watchlists — manual copy-paste, or a free one-click import that re-syncs daily.">
+  <meta property="og:url" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/chartink-to-tradingview.html">
+  <meta property="og:image" content="https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/chartink-screener.png">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" type="image/png" sizes="16x16" href="assets/img/icon16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/img/icon32.png">
+  <link rel="apple-touch-icon" href="assets/img/icon128.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="assets/css/site.css">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    "headline": "How to Import a Chartink Screener into TradingView",
+    "description": "Two ways to get Chartink screener results into TradingView watchlists: the manual copy-paste method, and a free Chrome extension that imports and re-syncs any scan in one click.",
+    "author": { "@type": "Person", "name": "Alen Sarang Satheesh" },
+    "datePublished": "2026-07-17",
+    "dateModified": "2026-07-17",
+    "image": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/assets/img/chartink-screener.png",
+    "mainEntityOfPage": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/chartink-to-tradingview.html"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://alensarangsatheesh.github.io/Tradingview-Watchlist/" },
+      { "@type": "ListItem", "position": 2, "name": "Chartink to TradingView" }
+    ]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Does it capture all pages of screener results?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Yes. If your scan returns multiple pages of stocks, the import captures every page — not just the one on screen." }
+      },
+      {
+        "@type": "Question",
+        "name": "Do I need a paid TradingView or Chartink account?",
+        "acceptedAnswer": { "@type": "Answer", "text": "No. The extension is free and works with free accounts on both sites. Watchlists live in the browser side panel, so TradingView's plan limits don't apply to them." }
+      },
+      {
+        "@type": "Question",
+        "name": "Where do the imported symbols go?",
+        "acceptedAnswer": { "@type": "Answer", "text": "Into the extension's side panel, stored locally in your browser. Nothing is uploaded to any server, and your TradingView account watchlists are untouched." }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="assets/img/icon48.png" alt="" width="26" height="26">
+        Unlimited Watchlists
+      </a>
+      <nav aria-label="Main">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#faq">FAQ</a>
+        <a href="privacy.html">Privacy</a>
+        <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="article">
+    <p class="crumbs"><a href="index.html">Home</a> › Guides</p>
+    <h1>How to import a Chartink screener into TradingView</h1>
+    <p class="updated">Updated July 17, 2026</p>
+
+    <p>
+      Chartink is where many Indian traders run their scans; TradingView is where they read charts.
+      The gap between the two is manual labor: a scan can return dozens of stocks, and there's no
+      built-in way to send them to TradingView. Here are both ways to bridge it — the manual method,
+      and the one-click method.
+    </p>
+
+    <h2>Method 1: Copy symbols by hand (free, tedious)</h2>
+    <ol>
+      <li>Run your screener on chartink.com and copy the symbol column — page by page, if the results span multiple pages.</li>
+      <li>Paste the symbols into TradingView's watchlist search one at a time, or format them as a comma-separated list (with exchange prefixes like <code>NSE:</code>) and use the watchlist import option.</li>
+      <li>Repeat tomorrow, because scan results change every day.</li>
+    </ol>
+    <p>
+      This works, but it collides with two walls: TradingView's free plan caps how many watchlists
+      and symbols you can keep (see <a href="tradingview-watchlist-limit.html">the watchlist-limit
+      guide</a>), and re-importing a fresh scan every market day gets old fast.
+    </p>
+
+    <h2>Method 2: One-click import with a free extension</h2>
+    <p>
+      <a href="index.html">Unlimited Watchlists for TradingView</a> adds an
+      <strong>Import to Watchlist</strong> button directly onto every Chartink screener page:
+    </p>
+
+    <ol>
+      <li><strong>Open your screener</strong> on chartink.com as usual.</li>
+      <li><strong>Click "Import to Watchlist."</strong> Every stock in the results — including all pages — is saved into a side-panel watchlist named after the screener.</li>
+      <li><strong>Click any symbol</strong> in the side panel to open its chart on TradingView. Press <kbd>Space</kbd> to step through the whole scan, chart by chart.</li>
+    </ol>
+
+    <figure class="shot">
+      <img src="assets/img/chartink-screener.png" alt="A Chartink screener results page with the Import to Watchlist button added by the extension" width="1280" height="800" loading="lazy">
+      <figcaption>The Import to Watchlist button on a Chartink screener page.</figcaption>
+    </figure>
+
+    <p>
+      You can also import without visiting the page: choose <strong>Import from Chartink</strong> in
+      the side panel and paste the screener's URL.
+    </p>
+
+    <h2>Re-sync instead of re-import</h2>
+    <p>
+      Each imported list remembers which screener it came from. When tomorrow's scan produces new
+      results, hit the <strong>re-sync</strong> button on that watchlist — the list refreshes with
+      the current results in one click. No copying, no duplicate lists piling up.
+    </p>
+
+    <figure class="shot">
+      <img src="assets/img/panel-watchlists-light.png" alt="Watchlists overview in the side panel showing re-sync buttons on Chartink-imported lists" width="467" height="965" loading="lazy">
+      <figcaption>Chartink-imported lists carry a re-sync button.</figcaption>
+    </figure>
+
+    <h2>Frequently asked questions</h2>
+
+    <h3>Does it capture all pages of screener results?</h3>
+    <p>
+      Yes. If your scan returns multiple pages of stocks, the import captures every page — not just
+      the one on screen.
+    </p>
+
+    <h3>Do I need a paid TradingView or Chartink account?</h3>
+    <p>
+      No. The extension is free and works with free accounts on both sites. Watchlists live in the
+      browser side panel, so TradingView's plan limits don't apply to them.
+    </p>
+
+    <h3>Where do the imported symbols go?</h3>
+    <p>
+      Into the extension's side panel, stored locally in your browser. Nothing is uploaded to any
+      server, and your TradingView account watchlists are untouched — details in the
+      <a href="privacy.html">privacy policy</a>.
+    </p>
+
+    <div class="cta-band">
+      <h2>From scan to charts in one click</h2>
+      <p>Free, private, and re-syncs your Chartink scans daily.</p>
+      <a class="btn" href="https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei" target="_blank" rel="noopener">Add to Chrome — Free</a>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-row">
+        <div>Developed by <strong>Alen Sarang Satheesh</strong></div>
+        <nav aria-label="Footer">
+          <a href="index.html">Home</a>
+          <a href="tradingview-watchlist-limit.html">Watchlist limit</a>
+          <a href="csv-to-tradingview.html">CSV import</a>
+          <a href="privacy.html">Privacy Policy</a>
+        </nav>
+      </div>
+      <p class="disclaimer">
+        Not affiliated with, endorsed by, or sponsored by TradingView or Chartink.
+        TradingView and Chartink are trademarks of their respective owners.
+      </p>
+    </div>
+  </footer>
+
+</body>
+</html>
