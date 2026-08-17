@@ -65,4 +65,21 @@
   // layout (a different activeChart instance the subscription above didn't cover) is
   // still reflected before the user clicks "Add".
   setInterval(publish, 2000);
+
+  // Fast symbol switching: the isolated content script asks us to change the chart symbol
+  // via TradingView's own charting API (instant, no search dialog). We ack whether the API
+  // was available so the content script can fall back to its search-box method if not.
+  window.addEventListener('message', (e) => {
+    if (e.source !== window || !e.data || e.data.__tvwl !== 'setSymbol') return;
+    let available = false;
+    try {
+      const api = window.TradingViewApi;
+      if (api && typeof api.activeChart === 'function' && typeof e.data.symbol === 'string') {
+        api.activeChart().setSymbol(e.data.symbol);
+        available = true;
+        publish();
+      }
+    } catch (err) { available = false; }
+    window.postMessage({ __tvwlAck: true, available }, '*');
+  });
 })();

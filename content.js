@@ -133,7 +133,45 @@
     });
   }
 
+  // Fast path: ask the MAIN-world bridge (tv-symbol-bridge.js) to change the symbol via
+  // TradingView's own charting API (activeChart().setSymbol) — instant, no search dialog.
+  // The bridge acks whether the API was available; resolves true if it handled the switch,
+  // false (so we fall back to the search box) if the API isn't present or no bridge answered.
+  function requestApiSymbolChange(symbol) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (v) => {
+        if (settled) return;
+        settled = true;
+        window.removeEventListener('message', onMsg);
+        clearTimeout(timer);
+        resolve(v);
+      };
+      const onMsg = (e) => {
+        if (e.source === window && e.data && e.data.__tvwlAck) finish(!!e.data.available);
+      };
+      window.addEventListener('message', onMsg);
+      window.postMessage({ __tvwl: 'setSymbol', symbol }, '*');
+      const timer = setTimeout(() => finish(false), 600); // no bridge/ack -> fall back
+    });
+  }
+
+  // Once the bridge confirms TradingView's charting API is present, keep using the fast path
+  // for the rest of the session and never wait on an ack again — so a busy main thread during
+  // a data-load spike can't trip the 600ms timeout and drop us onto the slow search-box method.
+  let tvApiConfirmed = false;
+
   async function performSeamlessSwitch(symbol) {
+    if (tvApiConfirmed) {
+      window.postMessage({ __tvwl: 'setSymbol', symbol }, '*');
+      return;
+    }
+    // Prefer the instant charting-API path; fall back to the search-box method if it can't run.
+    if (await requestApiSymbolChange(symbol)) { tvApiConfirmed = true; return; }
+    await performSearchBoxSwitch(symbol);
+  }
+
+  async function performSearchBoxSwitch(symbol) {
     document.body.classList.add(SWITCHING_CLASS);
     try {
       let input = findSearchInput();
