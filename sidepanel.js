@@ -8,6 +8,7 @@ const settingsModal = document.getElementById("settingsModal");
 const closeSettings = document.getElementById("closeSettings");
 const themeDark = document.getElementById("themeDark");
 const themeLight = document.getElementById("themeLight");
+const defaultMarketSelect = document.getElementById("defaultMarketSelect");
 
 const backupDataBtn = document.getElementById("backupDataBtn");
 const restoreDataBtn = document.getElementById("restoreDataBtn");
@@ -44,6 +45,22 @@ let draggedElement = null;
 let draggedIndex = null;
 let dragOverElement = null;
 let draggedType = null;
+
+// Default market applied to bare tickers (no EXCHANGE: prefix) when opening a chart.
+// Stored in chrome.storage.local. Default 'NSE': bare/un-prefixed tickers (legacy watchlists,
+// CSV/Chartink imports) are treated as India/NSE, preserving the extension's original behavior
+// and the BSE numeric-code resolution. An explicit EXCHANGE: prefix always wins, so stocks
+// added from a chart (e.g. NASDAQ:AAPL) keep their own exchange. 'AUTO' (selectable in Settings)
+// emits no prefix and lets TradingView resolve the primary listing instead.
+let defaultExchange = 'NSE';
+
+// Comparison-only form, kept in sync with canonicalSymbol in content.js / background.js.
+// Strips any exchange prefix so "AAPL" and "NASDAQ:AAPL" are treated as the same stock.
+const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[A-Z0-9]+:/, '').replace(/[&_]/g, '-');
+
+// Display-only: drops the leading EXCHANGE: prefix so the watchlist shows just the ticker
+// (e.g. "BATS:AAPL" -> "AAPL"). The full symbol is still stored and used for opening charts.
+const displaySymbol = (s) => String(s).replace(/^[A-Za-z0-9]+:/, '');
 
 // ----------------- MESSAGE LISTENER (For Global Shortcuts & Sync) -----------------
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -107,7 +124,7 @@ function selectNextStock() {
   if (nextItem) {
     const stockName = nextItem.querySelector('.stock-name');
     if (stockName) {
-      const symbol = stockName.textContent.trim();
+      const symbol = stockName.dataset.symbol || stockName.textContent.trim();
       setActiveStock(symbol);
       openTradingView(symbol);
       nextItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -230,7 +247,9 @@ function clearSearch() {
 function filterStocks(term) {
   let visible = false;
   stocksContainer.querySelectorAll('li:not(.empty-message)').forEach(item => {
-    const name = item.querySelector('.stock-name')?.textContent.toLowerCase() || '';
+    const nameEl = item.querySelector('.stock-name');
+    // Match against the full symbol (with exchange) so "aapl" and "bats" both find BATS:AAPL.
+    const name = (nameEl?.dataset.symbol || nameEl?.textContent || '').toLowerCase();
     if (name.includes(term)) { item.classList.remove('hidden'); visible = true; }
     else item.classList.add('hidden');
   });
@@ -257,6 +276,7 @@ function reapplySearch() {
     filterStocks(stockSearchInput.value.toLowerCase().trim());
   }
 }
+
 
 // ----------------- STATE & NOTIFS -----------------
 function saveLastSelectedWatchlist(index) { chrome.storage.local.set({ lastSelectedWatchlistIndex: index }); }
@@ -353,9 +373,14 @@ function openStocksView(index) {
 
     let needsResolution = false;
     const resolvePromises = (wl.stocks || []).map(async (stock, i) => {
-      const match = stock.match(/^(NSE|BSE):(.*)/i);
+      const match = stock.match(/^([A-Za-z0-9]+):(.*)/);
+      const pfx = match ? match[1].toUpperCase() : '';
       const sym = match ? match[2] : stock;
-      if (/^\d+$/.test(sym)) {
+      // Only numeric BSE scrip codes need name resolution (India-specific). A numeric ticker
+      // on another exchange (e.g. HKEX:700) is left as-is.
+      const isBseNumeric = /^\d+$/.test(sym) &&
+        (pfx === 'BSE' || (!pfx && (defaultExchange === 'NSE' || defaultExchange === 'BSE')));
+      if (isBseNumeric) {
         needsResolution = true;
         const tvSymbol = await getTradingViewSymbol(stock);
         return { i, old: stock, tvSymbol };
@@ -430,22 +455,29 @@ async function renderStocks(stocks, lastSelected) {
         li.addEventListener('dragleave', (e) => handleDragLeave(e, stocksContainer));
         li.addEventListener('contextmenu', (e) => openContextMenu(e, stock));
         const div = document.createElement("div"); div.className = "stock-main-content";
-        let innerHTML = `<span class="stock-name">${stock}</span>`;
-        if (notes[stock]) {
-          if (notes[stock].color) {
-            innerHTML = `<span class="stock-tag-dot" style="background-color: ${notes[stock].color};"></span>` + innerHTML;
-          }
-          if (notes[stock].text) {
-            // Note: Make sure to escape HTML if note contains tags. We use textContent later or sanitize here.
-            // For simplicity and safety, we will append it as a text node instead of innerHTML later if needed,
-            // but we can just use a span and set textContent.
-            const textSpan = document.createElement('span');
-            textSpan.className = 'stock-note-text';
-            textSpan.textContent = notes[stock].text;
-            innerHTML += textSpan.outerHTML;
-          }
+        const note = notes[stock];
+        // Optional colour tag dot (leftmost).
+        if (note && note.color) {
+          const dot = document.createElement('span');
+          dot.className = 'stock-tag-dot';
+          dot.style.backgroundColor = note.color;
+          div.appendChild(dot);
         }
-        div.innerHTML = innerHTML;
+        // The row label shows the ticker only; the full EXCHANGE:SYMBOL lives on data-symbol
+        // (used for open/active/search/keyboard logic) and in the hover title.
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'stock-name';
+        nameSpan.dataset.symbol = stock;
+        nameSpan.textContent = displaySymbol(stock);
+        nameSpan.title = stock;
+        div.appendChild(nameSpan);
+        // Optional note text.
+        if (note && note.text) {
+          const textSpan = document.createElement('span');
+          textSpan.className = 'stock-note-text';
+          textSpan.textContent = note.text;
+          div.appendChild(textSpan);
+        }
 
         const grp = document.createElement("div"); grp.className = "stock-buttons-group";
 
@@ -528,7 +560,7 @@ function setActiveStock(stock) {
     watchlists[currentWatchlistIndex].lastSelected = stock;
     chrome.storage.local.set({ watchlists }, () => {
       stocksContainer.querySelectorAll('li').forEach(item => {
-        item.classList.toggle('active', item.querySelector('.stock-name')?.textContent.trim() === stock);
+        item.classList.toggle('active', item.querySelector('.stock-name')?.dataset.symbol === stock);
       });
     });
   });
@@ -536,13 +568,17 @@ function setActiveStock(stock) {
 
 // ----------------- TRADINGVIEW TAB LOGIC -----------------
 async function getTradingViewSymbol(stock) {
-  let exchange = 'NSE';
+  const def = (defaultExchange || 'NSE').toUpperCase();
+  // 'AUTO' => no prefix; let TradingView's fuzzy search resolve the primary listing.
+  let exchange = def === 'AUTO' ? '' : def;
   let sym = stock;
-  const match = stock.match(/^(NSE|BSE):(.*)/i);
+  const match = stock.match(/^([A-Za-z0-9]+):(.*)/);
   if (match) {
+    // An explicit exchange prefix (NSE:, NASDAQ:, LSE:, BINANCE:, …) always wins.
     exchange = match[1].toUpperCase();
     sym = match[2];
-  } else if (/^\d+$/.test(stock)) {
+  } else if (/^\d+$/.test(stock) && (def === 'NSE' || def === 'BSE')) {
+    // A purely-numeric ticker in an Indian-market context is a BSE scrip code.
     exchange = 'BSE';
   }
 
@@ -586,8 +622,14 @@ async function getTradingViewSymbol(stock) {
     }
   }
 
-  const sanitizedStock = sym.includes('_') ? sym : sym.replace(/-/g, '_').replace(/&/g, '_');
-  return `${exchange}:${sanitizedStock}`;
+  // NSE/BSE tickers use '_' where TradingView spells '-'/'&' (e.g. M&M -> M_M,
+  // BAJAJ-AUTO -> BAJAJ_AUTO). This is an India-specific quirk that would corrupt tickers on
+  // other exchanges (e.g. BRK.B, BTC-USD), so only apply it for NSE/BSE.
+  const isIndia = exchange === 'NSE' || exchange === 'BSE';
+  const sanitizedStock = (isIndia && !sym.includes('_'))
+    ? sym.replace(/-/g, '_').replace(/&/g, '_')
+    : sym;
+  return exchange ? `${exchange}:${sanitizedStock}` : sanitizedStock;
 }
 
 function activateTab(tab) {
@@ -904,6 +946,18 @@ ctxClearBtn.addEventListener('click', () => {
 });
 
 chrome.storage.local.get('theme', ({ theme }) => applyTheme(theme === 'light' ? 'light' : 'dark'));
+
+// ----------------- DEFAULT MARKET -----------------
+chrome.storage.local.get('defaultExchange', ({ defaultExchange: stored }) => {
+  if (stored) defaultExchange = stored;
+  if (defaultMarketSelect) defaultMarketSelect.value = defaultExchange;
+});
+if (defaultMarketSelect) {
+  defaultMarketSelect.addEventListener('change', () => {
+    defaultExchange = defaultMarketSelect.value || 'NSE';
+    chrome.storage.local.set({ defaultExchange });
+  });
+}
 
 settingsBtn.onclick = () => { settingsModal.style.display = 'flex'; };
 closeSettings.onclick = () => { settingsModal.style.display = 'none'; };

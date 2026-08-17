@@ -40,6 +40,16 @@
         "https://in.tradingview.com/*",
         "https://*.tradingview.com/*"
       ],
+      "js": ["tv-symbol-bridge.js"],
+      "world": "MAIN",
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.tradingview.com/*",
+        "https://in.tradingview.com/*",
+        "https://*.tradingview.com/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_idle",
       "all_frames": true

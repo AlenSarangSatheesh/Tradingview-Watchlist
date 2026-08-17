@@ -19,8 +19,10 @@ function initializeExtension() {
 
 // --- WATCHLIST DEDUPE ---
 // Comparison-only form, kept in sync with canonicalSymbol in content.js: the same stock can
-// arrive as "M&M" (Chartink), "M_M"/"M-M" (TradingView) or "NSE:X" (CSV upload).
-const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^(NSE|BSE):/, '').replace(/[&_]/g, '-');
+// arrive as "M&M" (Chartink), "M_M"/"M-M" (TradingView) or "NSE:X" (CSV upload). Any
+// exchange prefix (NSE:, NASDAQ:, LSE:, BINANCE:, …) is stripped so "AAPL" and "NASDAQ:AAPL"
+// are treated as the same stock.
+const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[A-Z0-9]+:/, '').replace(/[&_]/g, '-');
 
 // Drops canonical duplicates from every watchlist, keeping the first occurrence so the
 // stored notation (which the chart links rely on) is preserved.

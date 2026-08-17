@@ -67,8 +67,9 @@
   const normalizeSymbol = (s) => s.toUpperCase().replace(/_/g, '-');
   // Comparison-only form: unifies the notations the different sources store for the same
   // stock ("M&M" from Chartink, "M_M"/"M-M" from TradingView, "NSE:X" from CSV uploads).
-  // Never stored — stored strings keep their original notation.
-  const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^(NSE|BSE):/, '').replace(/[&_]/g, '-');
+  // Any exchange prefix (NSE:, NASDAQ:, LSE:, BINANCE:, …) is stripped so "AAPL" and
+  // "NASDAQ:AAPL" compare equal. Never stored — stored strings keep their original notation.
+  const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[A-Z0-9]+:/, '').replace(/[&_]/g, '-');
 
   // --- GHOST MODE CSS ---
   const GHOST_STYLE_ID = 'tv-ghost-mode-style';
@@ -151,7 +152,10 @@
       // especially if the user clicked the side panel and the iframe lost focus.
       input.focus();
 
-      const searchString = symbol.includes(':') ? symbol : `NSE:${symbol}`;
+      // The side panel builds the fully-qualified symbol (via getTradingViewSymbol) before
+      // sending it here, so pass it through verbatim. A bare symbol (e.g. "Auto" default
+      // market) is handed to TradingView as-is and its fuzzy search picks the primary listing.
+      const searchString = symbol;
       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       
       // Wait a tiny bit for the input to be fully ready
@@ -193,12 +197,21 @@
 
   // --- EXTRACTION ---
   function extractCurrentSymbol() {
+    // Primary source: the MAIN-world bridge (tv-symbol-bridge.js) mirrors TradingView's
+    // charting API — activeChart().symbol() — into this dataset attribute. It is the exact,
+    // fully-qualified current symbol WITH its exchange (e.g. "NASDAQ:AAPL", "NSE:RELIANCE"),
+    // so clicking the saved stock reopens the exact same chart for any market/country.
+    const bridged = document.documentElement.dataset.tvActiveSymbol;
+    if (bridged && bridged.includes(':')) {
+      return bridged.toUpperCase();
+    }
+
+    // Fallbacks (used only if the bridge hasn't published yet): the page title gives the
+    // bare ticker; keep the URL's exchange prefix only when its base symbol matches the title.
     let titleSymbol = 'UNKNOWN';
     const titleMatch = document.title.match(/^([A-Z0-9&\-._]+)\s/);
     if (titleMatch) titleSymbol = titleMatch[1].toUpperCase();
 
-    // Prioritize URL extraction to maintain the exchange prefix (e.g. BSE:TCS)
-    // ONLY if the base symbol matches the current title symbol.
     const urlMatch = location.href.match(/symbol=([^&]+)/i);
     if (urlMatch) {
       const decoded = decodeURIComponent(urlMatch[1]);

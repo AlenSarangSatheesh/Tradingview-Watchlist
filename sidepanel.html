@@ -122,6 +122,17 @@ h2 {
   font-size: 12px;
 }
 
+.settings-select {
+  background: var(--input-bg);
+  color: var(--text);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  padding: 5px 8px;
+  font-size: 12px;
+  outline: none;
+  cursor: pointer;
+}
+
 .clear-search-btn {
   position: absolute;
   right: 16px;
@@ -788,6 +799,31 @@ h2 {
             <button id="themeDark" class="theme-opt">Dark</button>
             <button id="themeLight" class="theme-opt">Light</button>
           </div>
+        </div>
+
+        <div class="settings-row">
+          <span class="settings-label">Default market</span>
+          <select id="defaultMarketSelect" class="settings-select" title="Exchange used for bare tickers that have no EXCHANGE: prefix">
+            <option value="AUTO">Auto (TradingView decides)</option>
+            <option value="NSE" selected>NSE — India</option>
+            <option value="BSE">BSE — India</option>
+            <option value="NASDAQ">NASDAQ — US</option>
+            <option value="NYSE">NYSE — US</option>
+            <option value="AMEX">AMEX — US</option>
+            <option value="LSE">LSE — UK</option>
+            <option value="TSX">TSX — Canada</option>
+            <option value="ASX">ASX — Australia</option>
+            <option value="HKEX">HKEX — Hong Kong</option>
+            <option value="TSE">TSE — Japan</option>
+            <option value="FWB">FWB — Germany</option>
+            <option value="EURONEXT">EURONEXT — Europe</option>
+            <option value="BINANCE">BINANCE — Crypto</option>
+          </select>
+        </div>
+        <div class="settings-row" style="margin-top: -6px;">
+          <span style="font-size: 11px; color: var(--text-muted); line-height: 1.4;">
+            Applied only to tickers with no <code style="font-family: monospace;">EXCHANGE:</code> prefix (e.g. CSV / Chartink imports). Stocks added with the <strong>Add</strong> button on a TradingView chart already include their exchange.
+          </span>
         </div>
 
         <div class="settings-row" style="align-items: flex-start; flex-direction: column; gap: 8px;">
