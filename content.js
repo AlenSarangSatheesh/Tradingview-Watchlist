@@ -69,7 +69,7 @@
   // stock ("M&M" from Chartink, "M_M"/"M-M" from TradingView, "NSE:X" from CSV uploads).
   // Any exchange prefix (NSE:, NASDAQ:, LSE:, BINANCE:, …) is stripped so "AAPL" and
   // "NASDAQ:AAPL" compare equal. Never stored — stored strings keep their original notation.
-  const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[A-Z0-9]+:/, '').replace(/[&_]/g, '-');
+  const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[^:]+:/, '').replace(/[&_]/g, '-');
 
   // --- GHOST MODE CSS ---
   const GHOST_STYLE_ID = 'tv-ghost-mode-style';

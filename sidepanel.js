@@ -56,11 +56,13 @@ let defaultExchange = 'NSE';
 
 // Comparison-only form, kept in sync with canonicalSymbol in content.js / background.js.
 // Strips any exchange prefix so "AAPL" and "NASDAQ:AAPL" are treated as the same stock.
-const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[A-Z0-9]+:/, '').replace(/[&_]/g, '-');
+const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[^:]+:/, '').replace(/[&_]/g, '-');
 
 // Display-only: drops the leading EXCHANGE: prefix so the watchlist shows just the ticker
-// (e.g. "BATS:AAPL" -> "AAPL"). The full symbol is still stored and used for opening charts.
-const displaySymbol = (s) => String(s).replace(/^[A-Za-z0-9]+:/, '');
+// (e.g. "BATS:AAPL" -> "AAPL", "TSX-DLY:SHOP" -> "SHOP"). The full symbol is still stored and
+// used for opening charts. Strips everything up to the first colon so hyphenated exchange
+// codes (delayed feeds) are handled too.
+const displaySymbol = (s) => String(s).replace(/^[^:]+:/, '');
 
 // ----------------- MESSAGE LISTENER (For Global Shortcuts & Sync) -----------------
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -572,10 +574,12 @@ async function getTradingViewSymbol(stock) {
   // 'AUTO' => no prefix; let TradingView's fuzzy search resolve the primary listing.
   let exchange = def === 'AUTO' ? '' : def;
   let sym = stock;
-  const match = stock.match(/^([A-Za-z0-9]+):(.*)/);
+  const match = stock.match(/^([^:]+):(.*)/);
   if (match) {
-    // An explicit exchange prefix (NSE:, NASDAQ:, LSE:, BINANCE:, …) always wins.
-    exchange = match[1].toUpperCase();
+    // An explicit exchange prefix (NSE:, NASDAQ:, TSX:, BINANCE:, …) always wins. Drop any
+    // "-DLY" delayed-feed qualifier TradingView appends for non-realtime data
+    // (e.g. TSX-DLY:SHOP -> TSX:SHOP) so the symbol is the canonical one.
+    exchange = match[1].toUpperCase().replace(/-DLY$/, '');
     sym = match[2];
   } else if (/^\d+$/.test(stock) && (def === 'NSE' || def === 'BSE')) {
     // A purely-numeric ticker in an Indian-market context is a BSE scrip code.

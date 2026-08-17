@@ -10,6 +10,16 @@
 
   const ATTR = 'tvActiveSymbol';
 
+  // TradingView appends "-DLY" to the exchange when showing delayed (non-realtime) data,
+  // e.g. "TSX-DLY:SHOP". Store the canonical exchange ("TSX:SHOP") — it still opens the same
+  // chart and shows delayed data if that's the user's access level. Only the exchange part
+  // (before the colon) is touched; the ticker may legitimately contain hyphens.
+  function cleanFeedSuffix(sym) {
+    const i = sym.indexOf(':');
+    if (i < 0) return sym;
+    return sym.slice(0, i).replace(/-DLY$/i, '') + sym.slice(i);
+  }
+
   function currentSymbol() {
     try {
       const api = window.TradingViewApi;
@@ -17,7 +27,7 @@
         const chart = api.activeChart();
         if (chart && typeof chart.symbol === 'function') {
           const sym = chart.symbol();
-          if (sym && typeof sym === 'string') return sym;
+          if (sym && typeof sym === 'string') return cleanFeedSuffix(sym);
         }
       }
     } catch (e) { /* API not ready yet or its shape changed — ignore */ }
