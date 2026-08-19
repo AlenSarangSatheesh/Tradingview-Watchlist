@@ -545,8 +545,79 @@ function removeStockFromWatchlist(stock, index) {
   });
 }
 
-function clearAllStocks() {
-  if (!confirm('Clear all stocks?')) return;
+// ----------------- CUSTOM DIALOGS -----------------
+// In-panel prompt/confirm so Chrome does not prepend "The extension … says" to native dialogs.
+function uiDialog({ title, message = '', input = false, defaultValue = '', placeholder = '', okText = 'OK', cancelText = 'Cancel', showCancel = true, danger = false }) {
+  return new Promise((resolve) => {
+    const prev = document.activeElement;
+    const overlay = document.createElement('div');
+    overlay.className = 'ui-modal';
+    const box = document.createElement('div');
+    box.className = 'ui-modal-box';
+
+    const h = document.createElement('div');
+    h.className = 'ui-modal-title';
+    h.textContent = title;
+    box.appendChild(h);
+
+    if (message) {
+      const m = document.createElement('div');
+      m.className = 'ui-modal-msg';
+      m.textContent = message;
+      box.appendChild(m);
+    }
+
+    let field = null;
+    if (input) {
+      field = document.createElement('input');
+      field.type = 'text';
+      field.className = 'ui-modal-input';
+      field.value = defaultValue;
+      if (placeholder) field.placeholder = placeholder;
+      box.appendChild(field);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'ui-modal-actions';
+
+    const onKey = (e) => {
+      if (e.key === 'Escape') { e.preventDefault(); finish(input ? null : false); }
+      else if (e.key === 'Enter') { e.preventDefault(); ok.click(); }
+    };
+    const finish = (val) => {
+      document.removeEventListener('keydown', onKey, true);
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+      if (prev && prev.focus) { try { prev.focus(); } catch (e) {} }
+      resolve(val);
+    };
+
+    if (showCancel) {
+      const c = document.createElement('button');
+      c.className = 'ui-modal-btn cancel';
+      c.textContent = cancelText;
+      c.onclick = () => finish(input ? null : false);
+      actions.appendChild(c);
+    }
+    const ok = document.createElement('button');
+    ok.className = 'ui-modal-btn ok' + (danger ? ' danger' : '');
+    ok.textContent = okText;
+    ok.onclick = () => finish(input ? (field.value.trim() || null) : true);
+    actions.appendChild(ok);
+
+    box.appendChild(actions);
+    overlay.appendChild(box);
+    overlay.addEventListener('mousedown', (e) => { if (e.target === overlay) finish(input ? null : false); });
+    document.addEventListener('keydown', onKey, true);
+
+    document.body.appendChild(overlay);
+    if (field) { field.focus(); field.select(); } else { ok.focus(); }
+  });
+}
+const uiPrompt = (title, defaultValue = '', placeholder = '') => uiDialog({ title, input: true, defaultValue, placeholder });
+const uiConfirm = (title, opts = {}) => uiDialog({ title, okText: opts.okText || 'OK', cancelText: opts.cancelText || 'Cancel', danger: !!opts.danger });
+
+async function clearAllStocks() {
+  if (!(await uiConfirm('Clear all stocks in this watchlist?', { okText: 'Clear all', danger: true }))) return;
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
     watchlists[currentWatchlistIndex].stocks = [];
     watchlists[currentWatchlistIndex].lastSelected = null;
@@ -696,8 +767,8 @@ chrome.storage.local.get("watchlists", ({ watchlists }) => {
   });
 });
 
-newBtn.onclick = () => {
-  const name = prompt("Watchlist name:");
+newBtn.onclick = async () => {
+  const name = await uiPrompt("New watchlist", "", "Watchlist name");
   if (name) {
     chrome.storage.local.get("watchlists", ({ watchlists }) => {
       watchlists.push({ name, stocks: [], lastSelected: null });
@@ -760,12 +831,12 @@ function importFromCsv(target) {
   else importCsvInput.click();                   // creates a watchlist named after the file
 }
 
-function importFromChartink(target) {
-  const url = prompt("Paste the Chartink screener URL:\n(e.g. https://chartink.com/screener/short-term-breakouts)");
+async function importFromChartink(target) {
+  const url = await uiPrompt("Import from Chartink", "", "Paste screener URL (chartink.com/screener/...)");
   if (!url) return;
   const trimmed = url.trim();
   if (!/^https?:\/\/(www\.)?chartink\.com\/screener\/.+/i.test(trimmed)) {
-    alert("Please enter a valid Chartink screener URL (https://chartink.com/screener/...).");
+    showToast("Enter a valid Chartink screener URL (chartink.com/screener/...)", 3500);
     return;
   }
   showToast("Importing from Chartink…", 3000);
@@ -887,12 +958,12 @@ function openContextMenu(e, stock) {
         console.log("Menu positioned at:", x, y);
       } catch (innerErr) {
         console.error("Inner menu error:", innerErr);
-        alert("Inner menu error: " + innerErr.message);
+        showToast("Menu error: " + innerErr.message, 3000);
       }
     });
   } catch (err) {
     console.error("Error opening menu:", err);
-    alert("Error opening menu: " + err.message);
+    showToast("Menu error: " + err.message, 3000);
   }
 }
 
@@ -972,16 +1043,16 @@ themeLight.onclick = () => setTheme('light');
 
 
 renameBtn.onclick = () => {
-  if (selectedIndex === null) return alert("Select watchlist");
-  chrome.storage.local.get("watchlists", ({ watchlists }) => {
-    const name = prompt("New name:", watchlists[selectedIndex].name);
+  if (selectedIndex === null) return showToast("Select a watchlist first");
+  chrome.storage.local.get("watchlists", async ({ watchlists }) => {
+    const name = await uiPrompt("Rename watchlist", watchlists[selectedIndex].name, "Watchlist name");
     if (name) { watchlists[selectedIndex].name = name; chrome.storage.local.set({ watchlists }, () => renderWatchlists(watchlists)); }
   });
 };
 
-deleteBtn.onclick = () => {
-  if (selectedIndex === null) return alert("Select watchlist");
-  if (confirm("Delete watchlist?")) {
+deleteBtn.onclick = async () => {
+  if (selectedIndex === null) return showToast("Select a watchlist first");
+  if (await uiConfirm("Delete this watchlist?", { okText: "Delete", danger: true })) {
     chrome.storage.local.get("watchlists", ({ watchlists }) => {
       watchlists.splice(selectedIndex, 1); selectedIndex = null;
       saveLastSelectedWatchlist(null);
