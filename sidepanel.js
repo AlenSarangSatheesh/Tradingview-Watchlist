@@ -526,6 +526,14 @@ function removeStockFromWatchlist(stock, index) {
         wl.stocks.splice(actualIndex, 1);
       }
     }
+    // Drop the removed stock's tag/note so re-adding the same symbol starts clean.
+    if (wl.stockNotes) {
+      delete wl.stockNotes[stock];
+      const canon = canonicalSymbol(stock);
+      for (const k of Object.keys(wl.stockNotes)) {
+        if (canonicalSymbol(k) === canon) delete wl.stockNotes[k];
+      }
+    }
     allStocks = [...wl.stocks];
     if (wl.lastSelected === stock) wl.lastSelected = wl.stocks[0] || null;
 
@@ -620,6 +628,7 @@ async function clearAllStocks() {
   if (!(await uiConfirm('Clear all stocks in this watchlist?', { okText: 'Clear all', danger: true }))) return;
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
     watchlists[currentWatchlistIndex].stocks = [];
+    watchlists[currentWatchlistIndex].stockNotes = {};
     watchlists[currentWatchlistIndex].lastSelected = null;
     allStocks = [];
     chrome.storage.local.set({ watchlists }, () => {

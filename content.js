@@ -453,7 +453,16 @@
           if(!chk) return;
           const idx = wl.stocks ? wl.stocks.findIndex(x => canonicalSymbol(x) === target) : -1;
           if(chk.checked && idx === -1) { if(!wl.stocks) wl.stocks=[]; wl.stocks.push(s); change=true; }
-          if(!chk.checked && idx !== -1) { wl.stocks.splice(idx, 1); change=true; }
+          if(!chk.checked && idx !== -1) {
+            const removed = wl.stocks[idx];
+            wl.stocks.splice(idx, 1);
+            if (wl.stockNotes) {
+              delete wl.stockNotes[removed];
+              const rc = canonicalSymbol(removed);
+              for (const k of Object.keys(wl.stockNotes)) { if (canonicalSymbol(k) === rc) delete wl.stockNotes[k]; }
+            }
+            change=true;
+          }
         });
         closeDialog();
         if(change) chrome.runtime.sendMessage({ action: "updateWatchlists", watchlists: res.watchlists }, () => showGlobalToast("Watchlists updated", "info"));
