@@ -1,9 +1,13 @@
 // background.js
 
 // --- INITIALIZATION ---
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener((details) => {
   console.log('Unlimited Watchlists for TradingView Installed');
   initializeExtension();
+  // Open the getting-started page only on a fresh install (not on updates/Chrome updates).
+  if (details.reason === 'install') {
+    chrome.tabs.create({ url: 'welcome.html' });
+  }
 });
 
 chrome.runtime.onStartup.addListener(() => {

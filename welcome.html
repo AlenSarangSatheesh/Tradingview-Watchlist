@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Welcome to Unlimited Watchlists for TradingView</title>
+  <style>
+    /* Dark product-launch page. One job: play the tutorial video, inline.
+       Single accent (electric blue), locked dark theme, restrained motion. */
+    :root {
+      --bg:        #0a0c10;
+      --bg-glow:   rgba(47, 107, 255, 0.16);
+      --surface:   #12161d;
+      --line:      rgba(255, 255, 255, 0.09);
+      --line-2:    rgba(255, 255, 255, 0.16);
+      --text:      #eef1f6;
+      --text-mut:  #9aa4b2;
+      --text-dim:  #6b7482;
+      --accent:    #2f6bff;
+      --accent-2:  #6c94ff;
+
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      --ease: cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      background:
+        radial-gradient(1100px 620px at 50% -8%, var(--bg-glow), transparent 60%),
+        var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .shell { width: 100%; max-width: 760px; padding: 0 28px; flex: 1;
+             display: flex; flex-direction: column; }
+
+    /* ---------- Hero ---------- */
+    .hero { text-align: center; padding: 80px 0 8px; }
+
+    h1 {
+      font-size: clamp(2.1rem, 5.6vw, 3.15rem);
+      font-weight: 700; letter-spacing: -0.033em; line-height: 1.06;
+      margin: 0 auto; max-width: 15ch; color: #fff;
+    }
+
+    /* ---------- Video (self-hosted, click-to-play) ---------- */
+    .stage { padding: 40px 0 24px; }
+    .player {
+      position: relative; display: block; width: 100%; padding-top: 56.25%;
+      border-radius: 16px; overflow: hidden; cursor: pointer;
+      border: 1px solid var(--line-2);
+      background: linear-gradient(150deg, #1b2230, #0d1016);
+      box-shadow: 0 30px 70px rgba(0,0,0,0.55);
+      transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+    }
+    .player:hover { transform: translateY(-4px); box-shadow: 0 40px 90px rgba(0,0,0,0.6); }
+    .player video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+    .player .scrim {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(60% 60% at 50% 46%, rgba(10,12,16,0.10), transparent 70%),
+        linear-gradient(180deg, rgba(10,12,16,0.12), rgba(10,12,16,0.55));
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+      transition: opacity 0.3s var(--ease);
+    }
+    .play {
+      width: 78px; height: 78px; border-radius: 999px; background: var(--accent);
+      display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 14px 40px rgba(47,107,255,0.5), inset 0 1px 0 rgba(255,255,255,0.35);
+      transition: transform 0.3s var(--ease), background 0.3s var(--ease);
+    }
+    .player:hover .play { transform: scale(1.07); background: #3f78ff; }
+    .play svg { width: 30px; height: 30px; fill: #fff; margin-left: 5px; }
+    .plabel { display: inline-flex; align-items: center; gap: 9px;
+              font-size: 14px; font-weight: 600; color: #fff;
+              background: rgba(10,12,16,0.5); backdrop-filter: blur(6px);
+              padding: 7px 15px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.14); }
+    .plabel .dur { color: var(--accent-2); font-variant-numeric: tabular-nums; }
+
+    /* Once playing: reveal native controls, drop the facade + hover lift */
+    .player.playing { cursor: default; }
+    .player.playing:hover { transform: none; box-shadow: 0 30px 70px rgba(0,0,0,0.55); }
+    .player.playing .scrim { opacity: 0; pointer-events: none; }
+
+    /* ---------- Footer ---------- */
+    footer { width: 100%; text-align: center; padding: 30px 28px 34px; margin-top: auto; }
+    footer p { font-size: 13px; color: var(--text-dim); margin: 0; }
+    footer a { color: var(--accent-2); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
+
+    /* ---------- Entrance motion ---------- */
+    .rise { opacity: 0; transform: translateY(16px); animation: rise 0.7s var(--ease) forwards; }
+    .d1 { animation-delay: 0.05s; } .d2 { animation-delay: 0.13s; } .d3 { animation-delay: 0.23s; }
+    @keyframes rise { to { opacity: 1; transform: none; } }
+
+    @media (max-width: 480px) {
+      .hero { padding: 52px 0 4px; }
+      .stage { padding: 30px 0 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .rise { opacity: 1; transform: none; animation: none; }
+      .player, .player .thumb, .player .play { transition: none; }
+      .player:hover { transform: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="shell">
+    <header class="hero">
+      <h1 class="rise d2">Tutorial</h1>
+    </header>
+
+    <div class="stage rise d3">
+      <div class="player" id="player" role="button" tabindex="0" aria-label="Play the tutorial video">
+        <video id="video" poster="media/tutorial-poster.jpg" preload="none" playsinline
+               src="media/tutorial.mp4"></video>
+        <span class="scrim">
+          <span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span>
+          <span class="plabel">Watch the tutorial <span class="dur">1:58</span></span>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <p>Have a question or an idea? <a href="mailto:alensarangsatheesh@gmail.com?subject=Feedback%20for%20Unlimited%20Watchlists">Email the developer</a></p>
+  </footer>
+
+  <script src="welcome.js"></script>
+</body>
+</html>
