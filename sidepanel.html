@@ -250,6 +250,30 @@ h2 {
   margin: 0;
 }
 
+/* Shown inside the watchlist container when no watchlists exist yet */
+.watchlist li.empty-state {
+  padding: 40px 28px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+  display: block;
+  border-bottom: none;
+  cursor: default;
+  min-height: 0;
+}
+
+.watchlist li.empty-state:hover {
+  background: transparent;
+}
+
+.empty-state .empty-plus {
+  color: var(--accent);
+  font-size: 16px;
+  font-weight: bold;
+  vertical-align: -1px;
+}
+
 /* Stock list item styling */
 .watchlist li {
   padding: 6px 10px;

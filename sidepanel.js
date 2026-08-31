@@ -315,6 +315,14 @@ function sortStocksAlphabetically() {
 // ----------------- RENDER -----------------
 function renderWatchlists(list) {
   container.innerHTML = "";
+  if (!list || list.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty-state";
+    empty.innerHTML = 'Click the <span class="empty-plus">&#x2295;</span> button above to create your first watchlist.';
+    container.appendChild(empty);
+    updateActionButtons();
+    return;
+  }
   list.forEach((wl, i) => {
     const li = document.createElement("li"); li.draggable = true; li.dataset.index = i;
     if (i === selectedIndex) li.classList.add("selected");
