@@ -318,7 +318,7 @@ function renderWatchlists(list) {
   if (!list || list.length === 0) {
     const empty = document.createElement("li");
     empty.className = "empty-state";
-    empty.innerHTML = 'Click the <span class="empty-plus">&#x2295;</span> button above to create your first watchlist.';
+    empty.innerHTML = 'Click the <img src="Images/New.png" alt="New" class="icon empty-plus"> button above to create your first watchlist.';
     container.appendChild(empty);
     updateActionButtons();
     return;
