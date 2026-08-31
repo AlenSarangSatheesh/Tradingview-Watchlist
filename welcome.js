@@ -1,12 +1,12 @@
-// Welcome page: self-hosted tutorial video, played inline.
+// Welcome page: inline YouTube player (click-to-play).
 // Kept in an external file because MV3's default extension CSP blocks inline
 // scripts and inline event handlers on chrome-extension:// pages.
 (function () {
   "use strict";
 
+  var VIDEO_ID = "l0Yg0iohA30";
   var player = document.getElementById("player");
-  var video = document.getElementById("video");
-  if (!player || !video) return;
+  if (!player) return;
 
   var started = false;
 
@@ -14,29 +14,28 @@
     if (started) return;
     started = true;
 
-    video.controls = true;
+    var iframe = document.createElement("iframe");
+    iframe.src =
+      "https://www.youtube-nocookie.com/embed/" + VIDEO_ID +
+      "?autoplay=1&rel=0&modestbranding=1&playsinline=1";
+    iframe.title = "Unlimited Watchlists for TradingView tutorial";
+    iframe.setAttribute(
+      "allow",
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    );
+    iframe.setAttribute("allowfullscreen", "");
+    iframe.setAttribute("referrerpolicy", "strict-origin-when-cross-origin");
+
+    player.innerHTML = "";
+    player.appendChild(iframe);
     player.classList.add("playing");
     player.removeAttribute("role");
     player.removeAttribute("tabindex");
     player.removeAttribute("aria-label");
-
-    var p = video.play();
-    if (p && typeof p.catch === "function") {
-      // Autoplay-with-sound can be blocked; fall back to showing controls so
-      // the user can start it with the native play button.
-      p.catch(function () {});
-    }
   }
 
-  player.addEventListener("click", function (e) {
-    // Once native controls are showing, let them handle clicks (pause/seek).
-    if (started) return;
-    e.preventDefault();
-    play();
-  });
-
+  player.addEventListener("click", play);
   player.addEventListener("keydown", function (e) {
-    if (started) return;
     if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
       e.preventDefault();
       play();

@@ -64,7 +64,10 @@
       transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
     }
     .player:hover { transform: translateY(-4px); box-shadow: 0 40px 90px rgba(0,0,0,0.6); }
-    .player video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; }
+    .player .thumb { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+                     opacity: 0.92; transition: opacity 0.35s var(--ease), transform 0.6s var(--ease); }
+    .player:hover .thumb { opacity: 1; transform: scale(1.03); }
+    .player iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
     .player .scrim {
       position: absolute; inset: 0;
       background:
@@ -125,8 +128,7 @@
 
     <div class="stage rise d3">
       <div class="player" id="player" role="button" tabindex="0" aria-label="Play the tutorial video">
-        <video id="video" poster="media/tutorial-poster.jpg" preload="none" playsinline
-               src="media/tutorial.mp4"></video>
+        <img class="thumb" id="thumb" src="media/tutorial-poster.jpg" alt="">
         <span class="scrim">
           <span class="play"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"></path></svg></span>
           <span class="plabel">Watch the tutorial <span class="dur">1:58</span></span>
