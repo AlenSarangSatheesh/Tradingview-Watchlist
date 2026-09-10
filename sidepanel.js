@@ -255,6 +255,17 @@ function handleDrop(e, type) {
 }
 
 // ----------------- SEARCH -----------------
+function updateSearchPlaceholder(count) {
+  if (!stockSearchInput) return;
+  if (!count || count <= 0) {
+    stockSearchInput.placeholder = 'Search symbols...';
+  } else if (count === 1) {
+    stockSearchInput.placeholder = 'Search 1 symbol...';
+  } else {
+    stockSearchInput.placeholder = `Search ${count} symbols...`;
+  }
+}
+
 function initializeSearch() {
   stockSearchInput.addEventListener('input', handleSearchInput);
   clearSearchBtn.addEventListener('click', clearSearch);
@@ -473,6 +484,7 @@ async function renderStocks(stocks, lastSelected) {
   stocksContainer.innerHTML = "";
   const display = (stocks && stocks.length > 0) ? 'flex' : 'none';
   sortBtn.style.display = display; clearAllBtn.style.display = display;
+  updateSearchPlaceholder((stocks && stocks.length) || 0);
 
   if (!stocks.length) { stocksContainer.innerHTML = '<li class="empty-message" style="text-align:center;color:#888;font-style:italic;">No stocks in this watchlist</li>'; return; }
 
