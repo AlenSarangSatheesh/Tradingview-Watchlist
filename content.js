@@ -36,9 +36,27 @@
     try {
       if (request.action === "changeSymbol") {
         performSeamlessSwitch(request.symbol);
+      } else if (request.action === "toggleInPageSidepanel") {
+        if (window.self === window.top) {
+          toggleSidepanel();
+        }
+      } else if (request.action === "openInPageSidepanel") {
+        if (window.self === window.top) {
+          setSidepanelOpen(true);
+        }
       }
     } catch(e) { console.error(e); }
     sendResponse({ success: true });
+  });
+
+  // --- WINDOW POSTMESSAGE LISTENER (for in-page iframe) ---
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.action === "changeSymbol" && e.data.symbol) {
+      performSeamlessSwitch(e.data.symbol);
+    } else if (e.data.action === "closeInPageSidepanel") {
+      setSidepanelOpen(false);
+    }
   });
 
   // --- GLOBAL KEYBOARD SHORTCUTS ---
@@ -52,6 +70,11 @@
       // Stop TradingView's default behavior (which cycles their own watchlist)
       e.preventDefault();
       e.stopPropagation();
+
+      // Forward to in-page iframe if present
+      if (sidepanelIframe && sidepanelIframe.contentWindow) {
+        sidepanelIframe.contentWindow.postMessage({ action: "triggerSelectNextStock" }, "*");
+      }
 
       // Send signal to Side Panel to switch stock
       if (chrome.runtime?.id) {
@@ -264,6 +287,203 @@
     return titleSymbol;
   }
 
+  // --- IN-PAGE ADJUSTABLE SIDEPANEL ---
+  let sidepanelDock = null;
+  let sidepanelIframe = null;
+  let sidepanelResizer = null;
+  let sidepanelToggleTab = null;
+  let isPanelOpen = false;
+  let panelWidth = 240;
+  let isResizing = false;
+
+  function setupDockStyles() {
+    if (document.getElementById('tv-wl-dock-style')) return;
+    const style = document.createElement('style');
+    style.id = 'tv-wl-dock-style';
+    style.textContent = `
+      :root {
+        --tv-wl-dock-width: 240px;
+      }
+      html.tv-wl-docked, body.tv-wl-docked {
+        width: calc(100vw - var(--tv-wl-dock-width, 240px)) !important;
+        margin-right: var(--tv-wl-dock-width, 240px) !important;
+        box-sizing: border-box !important;
+      }
+      #tv-wl-sidepanel-dock {
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        z-index: 2147483640;
+        display: flex;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+        background: #111;
+        transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+        box-sizing: border-box;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+      #tv-wl-sidepanel-dock.resizing {
+        transition: none !important;
+      }
+      #tv-wl-resizer {
+        position: absolute;
+        top: 0;
+        left: -6px;
+        width: 8px;
+        height: 100%;
+        cursor: col-resize;
+        z-index: 1000;
+        background: transparent;
+        border-left: 2px solid #2a2e39;
+        transition: border-color 0.15s ease, background 0.15s ease;
+      }
+      #tv-wl-resizer:hover, #tv-wl-resizer.active {
+        border-left-color: #2962FF;
+        background: rgba(41, 98, 255, 0.25);
+      }
+      #tv-wl-iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: #111;
+        border-top-left-radius: 12px;
+        border-bottom-left-radius: 12px;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function loadPanelSettings() {
+    return new Promise((resolve) => {
+      if (!chrome.runtime?.id) return resolve();
+      chrome.storage.local.get(['customSidepanelWidth', 'autoOpenOnNextLoad'], (res) => {
+        if (res.customSidepanelWidth && res.customSidepanelWidth >= 140) {
+          panelWidth = res.customSidepanelWidth;
+        }
+        if (res.autoOpenOnNextLoad) {
+          chrome.storage.local.remove('autoOpenOnNextLoad');
+          isPanelOpen = true;
+        } else {
+          isPanelOpen = false;
+        }
+        resolve();
+      });
+    });
+  }
+
+  function updateLayoutForPanel(open, width) {
+    const currentW = open ? width : 0;
+    document.documentElement.style.setProperty('--tv-wl-dock-width', `${currentW}px`);
+    if (open) {
+      document.documentElement.classList.add('tv-wl-docked');
+      document.body.classList.add('tv-wl-docked');
+    } else {
+      document.documentElement.classList.remove('tv-wl-docked');
+      document.body.classList.remove('tv-wl-docked');
+    }
+    window.dispatchEvent(new Event('resize'));
+  }
+
+  function createSidepanelDock() {
+    const existing = document.getElementById('tv-wl-sidepanel-dock');
+    if (existing) {
+      sidepanelDock = existing;
+      sidepanelResizer = document.getElementById('tv-wl-resizer');
+      sidepanelIframe = document.getElementById('tv-wl-iframe');
+      setupResizerEvents();
+      return;
+    }
+    if (!document.body) return;
+    setupDockStyles();
+
+    sidepanelDock = document.createElement('div');
+    sidepanelDock.id = 'tv-wl-sidepanel-dock';
+    sidepanelDock.style.width = `${panelWidth}px`;
+    sidepanelDock.style.transform = isPanelOpen ? 'translateX(0)' : `translateX(${panelWidth + 30}px)`;
+
+    sidepanelResizer = document.createElement('div');
+    sidepanelResizer.id = 'tv-wl-resizer';
+    sidepanelResizer.title = 'Drag to resize sidepanel (down to 140px)';
+
+    sidepanelIframe = document.createElement('iframe');
+    sidepanelIframe.id = 'tv-wl-iframe';
+    sidepanelIframe.src = chrome.runtime.getURL('sidepanel.html');
+
+    sidepanelDock.appendChild(sidepanelResizer);
+    sidepanelDock.appendChild(sidepanelIframe);
+    document.body.appendChild(sidepanelDock);
+
+    setupResizerEvents();
+
+    if (isPanelOpen) {
+      updateLayoutForPanel(true, panelWidth);
+    }
+  }
+
+  function setupResizerEvents() {
+    if (!sidepanelResizer) return;
+    let startX = 0;
+    let startWidth = 0;
+
+    sidepanelResizer.onmousedown = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isResizing = true;
+      startX = e.clientX;
+      startWidth = panelWidth;
+      sidepanelDock.classList.add('resizing');
+      sidepanelResizer.classList.add('active');
+      if (sidepanelIframe) sidepanelIframe.style.pointerEvents = 'none';
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    };
+
+    document.addEventListener('mousemove', (e) => {
+      if (!isResizing) return;
+      e.preventDefault();
+      const delta = startX - e.clientX;
+      const minW = 140;
+      const maxW = Math.round(window.innerWidth * 0.7);
+      const newWidth = Math.round(Math.max(minW, Math.min(startWidth + delta, maxW)));
+      panelWidth = newWidth;
+      sidepanelDock.style.width = `${newWidth}px`;
+      updateLayoutForPanel(true, newWidth);
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!isResizing) return;
+      isResizing = false;
+      sidepanelDock.classList.remove('resizing');
+      sidepanelResizer.classList.remove('active');
+      if (sidepanelIframe) sidepanelIframe.style.pointerEvents = 'auto';
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      if (chrome.runtime?.id) {
+        chrome.storage.local.set({ customSidepanelWidth: panelWidth });
+      }
+      window.dispatchEvent(new Event('resize'));
+    });
+  }
+
+  function setSidepanelOpen(open) {
+    isPanelOpen = open;
+    if (!sidepanelDock) createSidepanelDock();
+    if (!sidepanelDock) return;
+    if (open) {
+      sidepanelDock.style.width = `${panelWidth}px`;
+      sidepanelDock.style.transform = 'translateX(0)';
+      updateLayoutForPanel(true, panelWidth);
+    } else {
+      sidepanelDock.style.transform = `translateX(${panelWidth + 30}px)`;
+      updateLayoutForPanel(false, 0);
+    }
+  }
+
+  function toggleSidepanel() {
+    setSidepanelOpen(!isPanelOpen);
+  }
+
   // --- FLOATING BUTTON (Pro UI) ---
   function loadContainerPosition() {
     return new Promise((resolve) => {
@@ -472,6 +692,9 @@
   }
 
   if (window.self === window.top) {
+    loadPanelSettings().then(() => {
+      createSidepanelDock();
+    });
     addButtons();
     let lastUrl = location.href;
     new MutationObserver(() => {

@@ -28,6 +28,31 @@ const stocksContainer = document.getElementById("stocksContainer");
 const stockSearchInput = document.getElementById("stockSearchInput");
 const clearSearchBtn = document.getElementById("clearSearchBtn");
 
+const closePanelBtn = document.getElementById("closePanelBtn");
+const closeStocksPanelBtn = document.getElementById("closeStocksPanelBtn");
+const isInIframe = window.parent && window.parent !== window;
+
+if (isInIframe) {
+  if (closePanelBtn) closePanelBtn.style.display = "flex";
+  if (closeStocksPanelBtn) closeStocksPanelBtn.style.display = "flex";
+}
+
+function requestCloseInPagePanel() {
+  if (isInIframe && window.parent) {
+    window.parent.postMessage({ action: "closeInPageSidepanel" }, "*");
+  }
+}
+if (closePanelBtn) closePanelBtn.onclick = requestCloseInPagePanel;
+if (closeStocksPanelBtn) closeStocksPanelBtn.onclick = requestCloseInPagePanel;
+
+window.addEventListener("message", (e) => {
+  if (e.data && e.data.action === "triggerSelectNextStock") {
+    if (stocksView && stocksView.style.display !== 'none') {
+      selectNextStock();
+    }
+  }
+});
+
 const ctxMenu = document.getElementById('stockContextMenu');
 const ctxMenuTitle = document.getElementById('ctxMenuTitle');
 const ctxColorDots = document.querySelectorAll('.color-dot');
@@ -280,9 +305,8 @@ function reapplySearch() {
 }
 
 
-// ----------------- STATE & NOTIFS -----------------
-function saveLastSelectedWatchlist(index) { chrome.storage.local.set({ lastSelectedWatchlistIndex: index }); }
-function loadLastSelectedWatchlist(cb) { chrome.storage.local.get('lastSelectedWatchlistIndex', ({ lastSelectedWatchlistIndex }) => cb(lastSelectedWatchlistIndex)); }
+function saveLastSelectedWatchlist(index) { if (chrome.runtime?.id) chrome.storage.local.set({ lastSelectedWatchlistIndex: index }); }
+function loadLastSelectedWatchlist(cb) { if (chrome.runtime?.id) chrome.storage.local.get('lastSelectedWatchlistIndex', ({ lastSelectedWatchlistIndex }) => cb(lastSelectedWatchlistIndex)); else cb(null); }
 
 function showToast(message, duration = 2000) {
   const toast = document.createElement("div"); toast.className = "toast"; toast.textContent = message;
@@ -328,7 +352,9 @@ function renderWatchlists(list) {
     if (i === selectedIndex) li.classList.add("selected");
 
     const nameSpan = document.createElement("span");
+    nameSpan.className = "watchlist-name";
     nameSpan.textContent = wl.name;
+    nameSpan.title = wl.name;
     li.appendChild(nameSpan);
 
     // Watchlists imported from Chartink carry their screener URL — offer one-click re-sync.
@@ -430,7 +456,7 @@ function openStocksView(index) {
     await renderStocks(wl.stocks || [], wl.lastSelected);
 
     if (wl.lastSelected) setTimeout(() => scrollToActiveStock(), 100);
-    watchlistView.style.display = "none"; stocksView.style.display = "block";
+    watchlistView.style.display = "none"; stocksView.style.display = "flex";
   });
 }
 
@@ -505,6 +531,9 @@ async function renderStocks(stocks, lastSelected) {
         stocksContainer.appendChild(li);
       });
       stocksContainer.scrollTop = currentScroll;
+      requestAnimationFrame(() => {
+        if (stocksContainer) stocksContainer.scrollTop = currentScroll;
+      });
       resolve();
     });
   });
@@ -735,33 +764,46 @@ function activateTab(tab) {
 async function openTradingView(stock) {
   const tvSymbol = await getTradingViewSymbol(stock);
 
+  // If running inside an in-page iframe on TradingView, notify parent directly
+  if (isInIframe && window.parent) {
+    window.parent.postMessage({ action: "changeSymbol", symbol: tvSymbol }, "*");
+    return;
+  }
 
-  chrome.tabs.query({ url: ["*://*.tradingview.com/*"] }, (tabs) => {
-    const activeTvTab = tabs.find(t => t.url.includes('/chart/')) || tabs[0];
-    if (activeTvTab) {
-      if (!activeTvTab.url.includes('/chart/')) {
-        const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
-        chrome.tabs.update(activeTvTab.id, { url, active: true }, () => {
-          chrome.windows.update(activeTvTab.windowId, { focused: true });
-        });
+  // If chrome.tabs is available (e.g. Chrome sidepanel, popout window)
+  if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
+    chrome.tabs.query({ url: ["*://*.tradingview.com/*"] }, (tabs) => {
+      const activeTvTab = tabs.find(t => t.active) || tabs.find(t => t.url && t.url.includes('/chart/')) || tabs[0];
+      if (activeTvTab) {
+        if (!activeTvTab.url || !activeTvTab.url.includes('/chart/')) {
+          const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+          chrome.tabs.update(activeTvTab.id, { url, active: true }, () => {
+            if (activeTvTab.windowId) {
+              chrome.windows.update(activeTvTab.windowId, { focused: true });
+            }
+          });
+          tradingviewTabId = activeTvTab.id;
+          return;
+        }
+
+        const sendMessage = () => {
+          chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: tvSymbol }, (response) => {
+            if (chrome.runtime.lastError) {
+              const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+              chrome.tabs.update(activeTvTab.id, { url });
+            }
+          });
+        };
+        
+        activateTab(activeTvTab);
+        sendMessage();
         tradingviewTabId = activeTvTab.id;
-        return;
-      }
-
-      const sendMessage = () => {
-        chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: tvSymbol }, (response) => {
-          if (chrome.runtime.lastError) {
-            const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
-            chrome.tabs.update(activeTvTab.id, { url });
-          }
-        });
-      };
-      
-      activateTab(activeTvTab);
-      sendMessage();
-      tradingviewTabId = activeTvTab.id;
-    } else { createTradingViewTabWithSymbol(tvSymbol); }
-  });
+      } else { createTradingViewTabWithSymbol(tvSymbol); }
+    });
+  } else if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
+    // Relay through background script
+    chrome.runtime.sendMessage({ action: "changeSymbol", symbol: tvSymbol });
+  }
 }
 
 function createTradingViewTabWithSymbol(tvSymbol) {
@@ -922,6 +964,7 @@ importCsvInput.onchange = (e) => {
 // ----------------- SETTINGS & THEME -----------------
 function applyTheme(theme) {
   const light = theme === 'light';
+  document.documentElement.classList.toggle('light', light);
   document.body.classList.toggle('light', light);
   if (themeDark) themeDark.classList.toggle('active', !light);
   if (themeLight) themeLight.classList.toggle('active', light);
@@ -1005,8 +1048,10 @@ ctxColorDots.forEach(dot => {
 
 function saveContextNote() {
   if (!ctxTargetStock) return;
+  const target = ctxTargetStock;
   const color = ctxSelectedColor;
   const text = ctxNoteInput.value.trim();
+  const savedScroll = stocksContainer ? stocksContainer.scrollTop : 0;
   
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
     if (!watchlists || !watchlists[currentWatchlistIndex]) return;
@@ -1014,16 +1059,63 @@ function saveContextNote() {
     if (!wl.stockNotes) wl.stockNotes = {};
     
     if (!color && !text) {
-      delete wl.stockNotes[ctxTargetStock];
+      delete wl.stockNotes[target];
     } else {
-      wl.stockNotes[ctxTargetStock] = { color, text };
+      wl.stockNotes[target] = { color, text };
     }
     
     chrome.storage.local.set({ watchlists }, () => {
       closeContextMenu();
-      renderStocks(wl.stocks, wl.lastSelected).then(() => {
-        reapplySearch();
-      });
+
+      // In-place DOM update prevents scroll jumping to top
+      let updatedInPlace = false;
+      if (stocksContainer) {
+        const rows = stocksContainer.querySelectorAll('li');
+        for (const row of rows) {
+          const nameSpan = row.querySelector('.stock-name');
+          if (nameSpan && nameSpan.dataset.symbol === target) {
+            const mainContent = row.querySelector('.stock-main-content');
+            if (mainContent) {
+              // Update color dot
+              let dot = mainContent.querySelector('.stock-tag-dot');
+              if (color) {
+                if (!dot) {
+                  dot = document.createElement('span');
+                  dot.className = 'stock-tag-dot';
+                  mainContent.insertBefore(dot, mainContent.firstChild);
+                }
+                dot.style.backgroundColor = color;
+              } else if (dot) {
+                dot.remove();
+              }
+
+              // Update note text
+              let textSpan = mainContent.querySelector('.stock-note-text');
+              if (text) {
+                if (!textSpan) {
+                  textSpan = document.createElement('span');
+                  textSpan.className = 'stock-note-text';
+                  mainContent.appendChild(textSpan);
+                }
+                textSpan.textContent = text;
+              } else if (textSpan) {
+                textSpan.remove();
+              }
+              updatedInPlace = true;
+            }
+            break;
+          }
+        }
+      }
+
+      if (updatedInPlace) {
+        if (stocksContainer) stocksContainer.scrollTop = savedScroll;
+      } else {
+        renderStocks(wl.stocks, wl.lastSelected).then(() => {
+          reapplySearch();
+          if (stocksContainer) stocksContainer.scrollTop = savedScroll;
+        });
+      }
     });
   });
 }
@@ -1079,7 +1171,7 @@ deleteBtn.onclick = async () => {
 };
 
 backBtn.onclick = () => {
-  stocksView.style.display = "none"; watchlistView.style.display = "block";
+  stocksView.style.display = "none"; watchlistView.style.display = "flex";
   currentWatchlistIndex = null; allStocks = [];
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
     renderWatchlists(watchlists);

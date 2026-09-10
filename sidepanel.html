@@ -5,6 +5,7 @@
   <title>Unlimited Watchlists for TradingView</title>
   <style>
 :root {
+  color-scheme: dark;
   --bg: #111;
   --surface: #1e1e1e;
   --surface-2: #1a1a1a;
@@ -28,7 +29,10 @@
   --icon-invert: 1;
 }
 
+:root:has(body.light),
+html.light,
 body.light {
+  color-scheme: light;
   --bg: #f4f5f7;
   --surface: #ffffff;
   --surface-2: #eceef1;
@@ -52,12 +56,75 @@ body.light {
   --icon-invert: 0;
 }
 
-body {
-  font-family: Arial, sans-serif;
+/* Custom sleek scrollbar matching theme */
+*, html, body {
+  scrollbar-color: var(--border-2) var(--bg);
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--bg);
+}
+
+*::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+html, body {
+  height: 100%;
   margin: 0;
   padding: 0;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
+  font-family: Arial, sans-serif;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+#watchlistView, #stocksView {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  max-height: 100vh;
+  width: 100%;
+  overflow: hidden;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+#watchlistView[style*="display: none"],
+#stocksView[style*="display: none"] {
+  display: none !important;
+}
+
+#watchlistView[style*="display: block"],
+#stocksView[style*="display: block"] {
+  display: flex !important;
 }
 
 .header {
@@ -66,10 +133,15 @@ body {
   align-items: center;
   background: var(--surface);
   padding: 8px 10px;
+  height: 45px;
+  min-height: 45px;
+  max-height: 45px;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
+  border-top-left-radius: 12px;
 }
 
 .actions {
@@ -86,17 +158,18 @@ h2 {
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  min-width: 0;
   padding: 0 10px;
 }
 
 /* Search container styling */
 .search-container {
-  position: sticky;
-  top: 49px;
   padding: 6px 10px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
-  z-index: 99;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .search-input {
@@ -248,6 +321,10 @@ h2 {
   list-style: none;
   padding: 0;
   margin: 0;
+  flex: 1 1 0%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 /* Shown inside the watchlist container when no watchlists exist yet */
@@ -275,17 +352,36 @@ h2 {
   opacity: 1;
 }
 
-/* Stock list item styling */
+/* Stock / Watchlist list item styling: generous height and comfortable padding */
 .watchlist li {
-  padding: 6px 10px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   cursor: pointer;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-height: 34px;
+  min-height: 44px;
   position: relative;
   transition: background 0.2s ease;
+}
+
+#watchlistContainer li, #stocksContainer li {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+
+.watchlist-name, #watchlistContainer li > span:first-child, .stock-name {
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: 0.2px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
 }
 
 .watchlist li:hover {
@@ -332,12 +428,8 @@ h2 {
   position: relative;
 }
 
-/* Stock name styling */
+/* Stock name spacing */
 .stock-name {
-  font-weight: 500;
-  min-width: 60px;
-  font-size: 14px;
-  flex: 1;
   margin-right: 8px;
 }
 
@@ -605,11 +697,6 @@ h2 {
 }
 
 @media (max-width: 400px) {
-  .stock-name {
-    min-width: 45px;
-    font-size: 12px;
-  }
-
   .delete-btn-right {
     width: 20px;
     height: 20px;
@@ -619,6 +706,89 @@ h2 {
   .delete-btn-right .icon {
     width: 9px;
     height: 9px;
+  }
+}
+
+@media (max-width: 280px) {
+  .header {
+    padding: 0 6px;
+    height: 45px;
+    min-height: 45px;
+  }
+  h2 {
+    font-size: 13px;
+    padding: 0 4px;
+    min-width: 0;
+  }
+  .actions {
+    gap: 2px;
+  }
+  .actions button, #backBtn {
+    min-width: 24px;
+    height: 28px;
+    padding: 3px 5px;
+  }
+  .actions button .icon, #backBtn .icon {
+    width: 12px;
+    height: 12px;
+  }
+  .search-container {
+    padding: 4px 6px;
+  }
+  .search-input {
+    height: 25px;
+    font-size: 11px;
+    padding: 3px 20px 3px 6px;
+  }
+  #watchlistContainer li,
+  #stocksContainer li {
+    min-height: 42px;
+    padding: 11px 14px;
+  }
+  .stock-name {
+    margin-right: 4px;
+  }
+  .stock-note-text {
+    font-size: 10px;
+    max-width: 50px;
+  }
+  .delete-btn-right {
+    width: 18px;
+    height: 18px;
+    margin-left: 2px;
+  }
+  .delete-btn-right .icon {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+@media (max-width: 210px) {
+  #watchlistView .header h2 {
+    font-size: 12px;
+    padding: 0 2px;
+  }
+  #watchlistTitle {
+    font-size: 11px;
+    padding: 0 2px;
+  }
+  .actions button, #backBtn {
+    min-width: 20px;
+    height: 28px;
+    padding: 2px;
+  }
+  .actions button .icon, #backBtn .icon {
+    width: 11px;
+    height: 11px;
+  }
+}
+
+@media (max-width: 170px) {
+  #stocksView #watchlistTitle {
+    display: none;
+  }
+  #watchlistView .header h2 {
+    display: none;
   }
 }
 
@@ -805,6 +975,10 @@ h2 {
           <img src="Images/settings.png" alt="Settings" class="icon">
           <div class="tooltip">Settings</div>
         </button>
+        <button id="closePanelBtn" style="display:none;" title="Close">
+          <span style="font-size: 15px; line-height: 1;">&times;</span>
+          <div class="tooltip">Close</div>
+        </button>
       </div>
     </div>
     <input type="file" id="importCsvInput" accept=".csv" style="display:none;">
@@ -831,6 +1005,10 @@ h2 {
         <button id="clearAllBtn">
           <img src="Images/delete.png" alt="Clear All" class="icon">
           <div class="tooltip">Clear All Stocks</div>
+        </button>
+        <button id="closeStocksPanelBtn" style="display:none;" title="Close">
+          <span style="font-size: 15px; line-height: 1;">&times;</span>
+          <div class="tooltip">Close</div>
         </button>
       </div>
     </div>

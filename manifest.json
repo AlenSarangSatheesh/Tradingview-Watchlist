@@ -3,7 +3,7 @@
   "name": "Unlimited Watchlists for TradingView",
   "description": "Free unlimited watchlists for TradingView in a side panel. One-click charts, Chartink screener import, CSV import & export.",
   "version": "1.4",
-  "permissions": ["storage", "sidePanel", "tabs"],
+  "permissions": ["storage", "tabs", "activeTab", "scripting"],
 
   "host_permissions": [
     "https://www.tradingview.com/*",
@@ -29,9 +29,6 @@
       "48": "icons/icon48.png",
       "128": "icons/icon128.png"
     }
-  },
-  "side_panel": {
-    "default_path": "sidepanel.html"
   },
   "content_scripts": [
     {
@@ -70,6 +67,21 @@
       ],
       "js": ["chartink.js"],
       "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "sidepanel.html",
+        "sidepanel.js",
+        "Images/*",
+        "icons/*"
+      ],
+      "matches": [
+        "https://www.tradingview.com/*",
+        "https://in.tradingview.com/*",
+        "https://*.tradingview.com/*"
+      ]
     }
   ]
 }

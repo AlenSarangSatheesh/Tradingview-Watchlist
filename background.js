@@ -47,11 +47,7 @@ function dedupeWatchlists(watchlists) {
 // --- MESSAGE LISTENERS ---
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   try {
-    if (request.action === "openSidePanel") {
-      if (sender.tab?.id) chrome.sidePanel.open({ tabId: sender.tab.id }).catch(() => { });
-      sendResponse({ success: true });
-    }
-    else if (request.action === "saveBseNameMap") {
+    if (request.action === "saveBseNameMap") {
       if (request.nameMap) {
         chrome.storage.local.get("bse_name_map", ({ bse_name_map }) => {
           const currentMap = bse_name_map || {};
@@ -79,6 +75,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     else if (request.action === "importFromChartinkUrl") {
       handleChartinkImport(request.url, request.mode).then(sendResponse);
+      return true;
+    }
+    else if (request.action === "changeSymbol") {
+      chrome.tabs.query({ url: ["*://*.tradingview.com/*"] }, (tabs) => {
+        const activeTvTab = tabs.find(t => t.active) || tabs.find(t => t.url && t.url.includes('/chart/')) || tabs[0];
+        if (activeTvTab) {
+          chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: request.symbol }, () => {
+            if (chrome.runtime.lastError) {
+              const url = `https://www.tradingview.com/chart/?symbol=${request.symbol}`;
+              chrome.tabs.update(activeTvTab.id, { url });
+            }
+          });
+        }
+      });
+      sendResponse({ success: true });
       return true;
     }
 
@@ -156,6 +167,47 @@ function sendImportMessage(tabId, mode, attempts = 8) {
 }
 
 // --- UI INTERACTIONS ---
-chrome.action.onClicked.addListener((tab) => {
-  if (tab?.id) chrome.sidePanel.open({ tabId: tab.id }).catch(() => { });
+chrome.action.onClicked.addListener(async (tab) => {
+  if (!tab?.id) return;
+
+  const sendToggleToTab = (tabId) => {
+    chrome.tabs.sendMessage(tabId, { action: "toggleInPageSidepanel" }, () => {
+      if (chrome.runtime.lastError) {
+        if (chrome.scripting) {
+          chrome.scripting.executeScript({
+            target: { tabId: tabId },
+            files: ['content.js']
+          }).then(() => {
+            setTimeout(() => {
+              chrome.tabs.sendMessage(tabId, { action: "openInPageSidepanel" }).catch(() => { });
+            }, 100);
+          }).catch(() => { });
+        }
+      }
+    });
+  };
+
+  let isTv = false;
+  const currentUrl = tab.url || (await chrome.tabs.get(tab.id).catch(() => null))?.url || '';
+  if (/tradingview\.com/i.test(currentUrl)) {
+    isTv = true;
+  }
+
+  if (isTv) {
+    sendToggleToTab(tab.id);
+  } else {
+    chrome.tabs.query({ url: ["*://*.tradingview.com/*"] }, (tabs) => {
+      const tvTab = tabs && (tabs.find(t => t.url && t.url.includes('/chart/')) || tabs[0]);
+      if (tvTab) {
+        chrome.tabs.update(tvTab.id, { active: true }, () => {
+          if (tvTab.windowId) chrome.windows.update(tvTab.windowId, { focused: true });
+          setTimeout(() => sendToggleToTab(tvTab.id), 200);
+        });
+      } else {
+        chrome.storage.local.set({ autoOpenOnNextLoad: true }, () => {
+          chrome.tabs.create({ url: "https://www.tradingview.com/chart/" });
+        });
+      }
+    });
+  }
 });
