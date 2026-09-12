@@ -17,8 +17,11 @@
   --btn-bg: #2b2b2b;
   --btn-hover: #3a3a3a;
   --row-hover: #222;
-  --accent: #0057ff;
-  --focus: #628ce1;
+  --accent: #00b4d8;
+  --accent-hover: #0096c7;
+  --accent-soft: rgba(0, 180, 216, 0.12);
+  --accent-text: #ffffff;
+  --focus: #00b4d8;
   --tooltip-bg: #333;
   --tooltip-text: #fff;
   --toast-bg: #323232;
@@ -27,6 +30,8 @@
   --footer-bg: #1a1a1a;
   --footer-text: #777;
   --icon-invert: 1;
+  --selection-border: #ffffff;
+  --selection-bg: rgba(255, 255, 255, 0.05);
 }
 
 :root:has(body.light),
@@ -44,8 +49,11 @@ body.light {
   --btn-bg: #e7e9ee;
   --btn-hover: #d7dae0;
   --row-hover: #eef0f3;
-  --accent: #0057ff;
-  --focus: #628ce1;
+  --accent: #0077b6;
+  --accent-hover: #023e8a;
+  --accent-soft: rgba(0, 119, 182, 0.08);
+  --accent-text: #ffffff;
+  --focus: #0077b6;
   --tooltip-bg: #333;
   --tooltip-text: #fff;
   --toast-bg: #323232;
@@ -54,6 +62,8 @@ body.light {
   --footer-bg: #eceef1;
   --footer-text: #888;
   --icon-invert: 0;
+  --selection-border: #000000;
+  --selection-bg: rgba(0, 0, 0, 0.03);
 }
 
 /* Custom sleek scrollbar matching theme */
@@ -199,11 +209,17 @@ h2 {
   background: var(--input-bg);
   color: var(--text);
   border: 1px solid var(--border-2);
-  border-radius: 4px;
-  padding: 5px 8px;
+  border-radius: 6px;
+  padding: 7px 10px;
   font-size: 12px;
   outline: none;
   cursor: pointer;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.settings-select:focus {
+  border-color: var(--focus);
 }
 
 .clear-search-btn {
@@ -389,12 +405,23 @@ h2 {
 }
 
 .watchlist li.active {
-  background: var(--accent);
-  color: #fff;
+  background: var(--selection-bg);
+  color: var(--text);
+  position: relative;
 }
 
-.watchlist li.active .icon {
-  filter: invert(1);
+.watchlist li.active::after {
+  content: '';
+  position: absolute;
+  inset: 2px 6px;
+  border: 1.5px solid var(--selection-border);
+  border-radius: 6px;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+.watchlist li.active:hover {
+  background: var(--row-hover);
 }
 
 /* Selected watchlist styling */
@@ -415,8 +442,8 @@ h2 {
 }
 
 .watchlist li.drag-over {
-  border-top: 3px solid var(--accent);
-  background: rgba(0, 87, 255, 0.1);
+  border-top: 2px solid var(--accent);
+  background: var(--selection-bg);
 }
 
 /* Main content container (everything except delete button) */
@@ -433,7 +460,7 @@ h2 {
   margin-right: 8px;
 }
 
-/* Delete button styling - positioned in right corner */
+/* Delete button styling - positioned in right corner, only visible on hover */
 .delete-btn-right {
   width: 24px;
   height: 24px;
@@ -445,10 +472,20 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: opacity 0.15s ease, background 0.2s ease, transform 0.2s ease;
   padding: 2px;
   flex-shrink: 0;
   margin-left: 8px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.watchlist li:hover .delete-btn-right,
+.watchlist li .delete-btn-right:focus {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .delete-btn-right:hover {
@@ -486,7 +523,7 @@ h2 {
 }
 
 .resync-btn:hover {
-  background: var(--accent);
+  background: var(--btn-hover);
 }
 
 .resync-btn .icon {
@@ -509,6 +546,121 @@ h2 {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Watchlist 3-dots button */
+.watchlist-more-btn {
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+  margin-left: 6px;
+  color: var(--text-muted);
+  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  opacity: 0.6;
+}
+
+.watchlist li:hover .watchlist-more-btn,
+.watchlist li.selected .watchlist-more-btn,
+.watchlist-more-btn.active {
+  opacity: 1;
+}
+
+.watchlist-more-btn:hover,
+.watchlist-more-btn.active {
+  background: var(--btn-hover);
+  color: var(--text);
+}
+
+.watchlist-more-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+/* Watchlist 3-dots dropdown menu */
+.watchlist-menu {
+  position: fixed;
+  background: var(--menu-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  z-index: 4000;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.watchlist-menu-item {
+  padding: 7px 10px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+  user-select: none;
+  position: relative;
+}
+
+.watchlist-menu-item:hover {
+  background: var(--menu-hover);
+}
+
+.watchlist-menu-item.danger {
+  color: #ff5252;
+}
+
+.watchlist-menu-item.danger:hover {
+  background: rgba(255, 82, 82, 0.12);
+  color: #ff5252;
+}
+
+.watchlist-menu-item svg {
+  flex-shrink: 0;
+}
+
+/* Sidedropdown submenu for Export */
+.watchlist-submenu {
+  position: absolute;
+  top: -4px;
+  right: 100%;
+  margin-right: 4px;
+  background: var(--menu-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  z-index: 4005;
+  min-width: 85px;
+  display: none;
+  flex-direction: column;
+  padding: 4px;
+}
+
+.watchlist-submenu::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  bottom: -6px;
+  left: -8px;
+  right: -8px;
+  z-index: -1;
+}
+
+.watchlist-menu-item.has-submenu:hover > .watchlist-submenu,
+.watchlist-submenu:hover {
+  display: flex;
 }
 
 /* Button group container */
@@ -584,7 +736,7 @@ h2 {
 .settings-content {
   background: var(--surface);
   color: var(--text);
-  width: 86%;
+  width: calc(100% - 24px);
   max-width: 320px;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -661,7 +813,8 @@ h2 {
 
 .theme-opt.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
 .settings-section {
@@ -676,18 +829,34 @@ h2 {
 }
 
 .settings-mail {
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-decoration: none;
-  background: var(--accent);
-  color: #fff;
-  padding: 8px 14px;
+  background: var(--accent-soft);
+  color: #00b4d8;
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  padding: 9px 14px;
   border-radius: 6px;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .settings-mail:hover {
-  filter: brightness(1.1);
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+body.light .settings-mail {
+  color: #0077b6;
+  border-color: rgba(0, 119, 182, 0.25);
+}
+
+body.light .settings-mail:hover {
+  background: var(--accent);
+  color: #ffffff;
 }
 
 
@@ -866,9 +1035,10 @@ h2 {
   background: var(--hover);
 }
 .grid-btn.active {
-  background: #2962FF;
-  border-color: #2962FF;
-  color: #FFF;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
 }
 .tf-select {
   background: var(--bg);
@@ -911,10 +1081,11 @@ h2 {
 }
 .context-menu-btn.primary {
   background: var(--accent);
-  color: #fff;
+  color: var(--accent-text);
+  font-weight: 600;
 }
 .context-menu-btn.primary:hover {
-  filter: brightness(1.1);
+  background: var(--accent-hover);
 }
 
 /* Custom dialogs (replace native prompt/confirm so Chrome does not add "The extension … says") */
@@ -945,8 +1116,8 @@ h2 {
 }
 .ui-modal-btn.cancel { background: var(--btn-bg); color: var(--text); }
 .ui-modal-btn.cancel:hover { background: var(--btn-hover); }
-.ui-modal-btn.ok { background: var(--accent); color: #fff; }
-.ui-modal-btn.ok:hover { filter: brightness(1.1); }
+.ui-modal-btn.ok { background: var(--accent); color: var(--accent-text); font-weight: 600; }
+.ui-modal-btn.ok:hover { background: var(--accent-hover); }
 .ui-modal-btn.ok.danger { background: #d32f2f; }
   </style>
 </head>
@@ -963,25 +1134,17 @@ h2 {
           <img src="Images/import.png" alt="Import" class="icon">
           <div class="tooltip">Import</div>
         </button>
-        <button id="renameBtn">
-          <img src="Images/rename.png" alt="Rename" class="icon">
-          <div class="tooltip">Rename Watchlist</div>
-        </button>
-        <button id="deleteBtn">
-          <img src="Images/delete.png" alt="Delete" class="icon">
-          <div class="tooltip">Delete Watchlist</div>
-        </button>
         <button id="settingsBtn">
           <img src="Images/settings.png" alt="Settings" class="icon">
           <div class="tooltip">Settings</div>
         </button>
-        <button id="closePanelBtn" style="display:none;" title="Close">
+        <button id="closePanelBtn" style="display:none;">
           <span style="font-size: 15px; line-height: 1;">&times;</span>
           <div class="tooltip">Close</div>
         </button>
       </div>
     </div>
-    <input type="file" id="importCsvInput" accept=".csv" style="display:none;">
+    <input type="file" id="importCsvInput" accept=".csv,.txt" style="display:none;">
     <ul id="watchlistContainer" class="watchlist"></ul>
   </div>
 
@@ -993,7 +1156,7 @@ h2 {
       </button>
       <h2 id="watchlistTitle"></h2>
       <div class="actions">
-        <input type="file" id="csvInput" accept=".csv" style="display:none;">
+        <input type="file" id="csvInput" accept=".csv,.txt" style="display:none;">
         <button id="sortBtn">
           <img src="Images/sort.png" alt="Sort" class="icon">
           <div class="tooltip">Sort A–Z</div>
@@ -1006,7 +1169,7 @@ h2 {
           <img src="Images/delete.png" alt="Clear All" class="icon">
           <div class="tooltip">Clear All Stocks</div>
         </button>
-        <button id="closeStocksPanelBtn" style="display:none;" title="Close">
+        <button id="closeStocksPanelBtn" style="display:none;">
           <span style="font-size: 15px; line-height: 1;">&times;</span>
           <div class="tooltip">Close</div>
         </button>
@@ -1036,7 +1199,7 @@ h2 {
           </div>
         </div>
 
-        <div class="settings-row">
+        <div class="settings-row" style="align-items: stretch; flex-direction: column; gap: 6px;">
           <span class="settings-label">Default market</span>
           <select id="defaultMarketSelect" class="settings-select" title="Exchange used for bare tickers that have no EXCHANGE: prefix">
             <option value="AUTO">Auto (TradingView decides)</option>
@@ -1058,14 +1221,14 @@ h2 {
         <div class="settings-row" style="align-items: flex-start; flex-direction: column; gap: 8px;">
           <span class="settings-label">Keyboard Shortcuts</span>
           <span style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
-            Press <kbd style="background: var(--btn-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-2); font-family: monospace; font-size: 11px;">Space</kbd> on a TradingView chart to quickly cycle to the next stock in your open watchlist.
+            Press <kbd style="background: var(--btn-bg); padding: 2px 6px; border-radius: 4px; border: 1px solid var(--border-2); font-family: monospace; font-size: 11px;">Space</kbd> on chart to cycle next stock.
           </span>
         </div>
         <div class="settings-section">
           <span class="settings-label" style="display:block; margin-bottom: 8px;">Tutorial</span>
           <a id="tutorialLink" href="https://youtu.be/l0Yg0iohA30" target="_blank" rel="noopener"
              style="display:flex; align-items:center; justify-content:center; gap:8px; background: var(--btn-bg); color: var(--text); border: 1px solid var(--border-2); padding: 9px; border-radius: 4px; cursor: pointer; font-size: 12px; text-decoration:none; transition: background 0.2s;">
-            <span style="color: var(--accent); font-size:13px; line-height:1;">&#9658;</span> Watch the video tutorial
+            <span style="color: var(--accent); font-size:11px; line-height:1;">&#9658;</span> Watch the video tutorial
           </a>
         </div>
         <div class="settings-section">

@@ -65,19 +65,22 @@
     const tag = e.target.tagName.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
-    // 2. Intercept Space Key
-    if (e.code === 'Space') {
+    // 2. Intercept Space Key (only on chart pages)
+    if (e.code === 'Space' && window.location.pathname.includes('/chart/')) {
       // Stop TradingView's default behavior (which cycles their own watchlist)
       e.preventDefault();
       e.stopPropagation();
 
-      // Forward to in-page iframe if present
+      // Forward to the sidepanel via ONE path only.  When the in-page iframe
+      // exists, use postMessage (instant, same event-loop).  Fall back to
+      // runtime messaging only when no iframe is present (e.g. the panel is
+      // closed).  Using BOTH caused selectNextStock() to fire twice — once
+      // from postMessage, once from runtime.onMessage — skipping a stock
+      // whenever the first call's async DOM update completed before the
+      // second call read the DOM.
       if (sidepanelIframe && sidepanelIframe.contentWindow) {
         sidepanelIframe.contentWindow.postMessage({ action: "triggerSelectNextStock" }, "*");
-      }
-
-      // Send signal to Side Panel to switch stock
-      if (chrome.runtime?.id) {
+      } else if (chrome.runtime?.id) {
         chrome.runtime.sendMessage({ action: "triggerSelectNextStock" }).catch(() => {
           // Ignore error if side panel is closed
         });
@@ -357,6 +360,49 @@
         border-top-left-radius: 11px;
         border-bottom-left-radius: 11px;
       }
+      #tv-ext-watchlist-toolbar-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 38px;
+        min-height: 36px;
+        max-width: 44px;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        margin: 4px auto;
+        padding: 0;
+        transition: background 0.15s ease, box-shadow 0.15s ease;
+        position: relative;
+        box-sizing: border-box;
+        flex-shrink: 0;
+        z-index: 10;
+      }
+      #tv-ext-watchlist-toolbar-btn:hover {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      html.theme-light #tv-ext-watchlist-toolbar-btn:hover,
+      html[data-theme="light"] #tv-ext-watchlist-toolbar-btn:hover,
+      body.theme-light #tv-ext-watchlist-toolbar-btn:hover {
+        background: rgba(0, 0, 0, 0.06);
+      }
+      #tv-ext-watchlist-toolbar-btn.active {
+        background: rgba(0, 180, 216, 0.2) !important;
+        box-shadow: inset 3px 0 0 #00B4D8 !important;
+      }
+      #tv-ext-watchlist-toolbar-btn img {
+        width: 22px;
+        height: 22px;
+        border-radius: 4px;
+        display: block;
+        pointer-events: none;
+        transition: transform 0.15s ease;
+      }
+      #tv-ext-watchlist-toolbar-btn:hover img {
+        transform: scale(1.1);
+      }
     `;
     document.head.appendChild(style);
   }
@@ -485,10 +531,119 @@
       sidepanelDock.style.transform = `translateX(${panelWidth + 30}px)`;
       updateLayoutForPanel(false, 0);
     }
+    updateToolbarButtonState();
   }
 
   function toggleSidepanel() {
     setSidepanelOpen(!isPanelOpen);
+  }
+
+  // --- TRADINGVIEW RIGHT TOOLBAR BUTTON ---
+  const TOOLBAR_BTN_ID = 'tv-ext-watchlist-toolbar-btn';
+
+  function updateToolbarButtonState() {
+    const btn = document.getElementById(TOOLBAR_BTN_ID);
+    if (btn) {
+      btn.classList.toggle('active', isPanelOpen);
+    }
+  }
+
+  function injectRightToolbarButton() {
+    if (document.getElementById(TOOLBAR_BTN_ID)) {
+      updateToolbarButtonState();
+      return;
+    }
+
+    setupDockStyles();
+
+    // 1. Try to find TradingView's right toolbar container
+    const containerSelectors = [
+      '.layout__area--right [class*="widgetbar-tabs"]',
+      '.layout__area--right .widgetbar-tabs',
+      '.layout__area--right [class*="tabs-"]',
+      '.layout__area--right [role="tablist"]',
+      '.widgetbar-tabs',
+      '[class*="widgetbar-tabs"]',
+      '.layout__area--right'
+    ];
+
+    let targetContainer = null;
+    for (const sel of containerSelectors) {
+      const el = document.querySelector(sel);
+      if (el && el.offsetHeight > 50) {
+        targetContainer = el;
+        break;
+      }
+    }
+
+    let insertBeforeEl = null;
+
+    if (targetContainer) {
+      const btns = Array.from(targetContainer.querySelectorAll('button, div[role="button"], div[role="tab"]'))
+        .filter(b => b.id !== TOOLBAR_BTN_ID && b.offsetParent !== null);
+      if (btns.length > 0) {
+        btns.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+        insertBeforeEl = btns[0]; // First button in the toolbar
+      }
+    } else {
+      // 2. Position-based fallback to find the right-edge buttons
+      const currentPanelOffset = isPanelOpen ? panelWidth : 0;
+      const rightEdge = window.innerWidth - currentPanelOffset;
+      const allButtons = Array.from(document.querySelectorAll('button, div[role="button"], div[role="tab"]'));
+      const rightBtns = allButtons.filter(b => {
+        if (b.id === TOOLBAR_BTN_ID || !b.offsetParent) return false;
+        const r = b.getBoundingClientRect();
+        return r.width >= 20 && r.width <= 65 &&
+               r.height >= 20 && r.height <= 65 &&
+               r.right >= rightEdge - 65 &&
+               r.top >= 10 && r.top < window.innerHeight * 0.55;
+      });
+
+      if (rightBtns.length > 0) {
+        rightBtns.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+        insertBeforeEl = rightBtns[0]; // First button
+        targetContainer = insertBeforeEl.parentElement;
+      }
+    }
+
+    if (!insertBeforeEl && !targetContainer) {
+      return; // Toolbar not loaded yet
+    }
+
+    let btn = document.getElementById(TOOLBAR_BTN_ID);
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.id = TOOLBAR_BTN_ID;
+      btn.type = 'button';
+      btn.title = 'Unlimited Watchlists';
+      btn.setAttribute('aria-label', 'Unlimited Watchlists');
+      btn.setAttribute('data-tooltip', 'Unlimited Watchlists');
+
+      const iconImg = document.createElement('img');
+      iconImg.src = chrome.runtime.getURL('icons/icon32.png');
+      iconImg.alt = 'Watchlists';
+
+      btn.appendChild(iconImg);
+
+      btn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleSidepanel();
+      };
+    }
+
+    // Insert at the very first position
+    if (insertBeforeEl && insertBeforeEl.parentElement) {
+      if (btn.nextElementSibling !== insertBeforeEl) {
+        insertBeforeEl.insertAdjacentElement('beforebegin', btn);
+      }
+    } else if (targetContainer) {
+      if (targetContainer.firstElementChild !== btn) {
+        targetContainer.prepend(btn);
+      }
+    }
+
+    updateToolbarButtonState();
   }
 
   // --- FLOATING BUTTON (Pro UI) ---
@@ -518,13 +673,13 @@
 
       buttonContainer.style.cssText = `
         position: fixed; top: ${containerPosition.y}px; left: ${containerPosition.x}px;
-        display: flex; flex-direction: column; gap: 8px; z-index: 999999; cursor: grab;
-        padding: 8px; background: #1E222D; border: 1px solid #2A2E39;
-        border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        user-select: none; width: 110px;
+        display: flex; flex-direction: column; gap: 6px; z-index: 999999; cursor: grab;
+        padding: 8px; background: rgba(30, 34, 45, 0.95); backdrop-filter: blur(8px);
+        border: 1px solid #2A2E39; border-radius: 8px; box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+        user-select: none; width: auto;
       `;
 
-      watchlistButton = createButton('Add', 'Add to Watchlist', '#2962FF', '#1E88E5', '#FFFFFF', '📋');
+      watchlistButton = createButton('Add', 'Add to Watchlist', '#00B4D8', '#0096C7', '#FFFFFF', '+');
       watchlistButton.addEventListener('click', (e) => handleButtonClick(e));
 
       buttonContainer.appendChild(watchlistButton);
@@ -539,30 +694,31 @@
     btn.title = title;
     btn.style.cssText = `
       background: ${bg}; color: ${textColor}; border: none; border-radius: 4px;
-      padding: 0 12px; cursor: pointer; font-size: 13px; font-weight: 700;
-      height: 34px; display: flex; align-items: center; justify-content: flex-start;
-      gap: 10px; transition: all 0.2s ease; width: 100%;
+      padding: 0 20px; cursor: pointer; font-size: 13px; font-weight: 600;
+      height: 32px; display: flex; align-items: center; justify-content: center;
+      gap: 7px; transition: all 0.15s ease; min-width: 88px; width: auto;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 6px rgba(0, 180, 216, 0.35);
     `;
-    btn.innerHTML = `<span style="font-size:15px; opacity:0.9;">${iconChar}</span> <span>${text}</span>`;
+    btn.innerHTML = `<span style="font-size:14px; font-weight:700; line-height:1;">${iconChar}</span> <span>${text}</span>`;
     btn.onmouseenter = () => {
       if(!isDragging) {
         btn.style.background = hoverBg;
         btn.style.transform = 'translateY(-1px)';
-        btn.style.boxShadow = '0 3px 6px rgba(0,0,0,0.2)';
+        btn.style.boxShadow = '0 3px 8px rgba(0, 180, 216, 0.5)';
       }
     };
     btn.onmouseleave = () => {
       if(!isDragging) {
         btn.style.background = bg;
         btn.style.transform = 'translateY(0)';
-        btn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+        btn.style.boxShadow = '0 2px 6px rgba(0, 180, 216, 0.35)';
       }
     };
     return btn;
   }
 
+  let dragListenersAdded = false;
   function setupDragEvents() {
     buttonContainer.onmousedown = (e) => {
       if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
@@ -573,25 +729,28 @@
       buttonContainer.style.opacity = '0.9';
     };
 
-    document.onmousemove = (e) => {
-      if (!isDragging) return;
-      wasJustDragged = true;
-      e.preventDefault();
-      const x = Math.max(0, Math.min(e.clientX - dragOffset.x, window.innerWidth - buttonContainer.offsetWidth));
-      const y = Math.max(0, Math.min(e.clientY - dragOffset.y, window.innerHeight - buttonContainer.offsetHeight));
-      buttonContainer.style.left = x + 'px';
-      buttonContainer.style.top = y + 'px';
-    };
+    if (!dragListenersAdded) {
+      dragListenersAdded = true;
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        wasJustDragged = true;
+        e.preventDefault();
+        const x = Math.max(0, Math.min(e.clientX - dragOffset.x, window.innerWidth - buttonContainer.offsetWidth));
+        const y = Math.max(0, Math.min(e.clientY - dragOffset.y, window.innerHeight - buttonContainer.offsetHeight));
+        buttonContainer.style.left = x + 'px';
+        buttonContainer.style.top = y + 'px';
+      });
 
-    document.onmouseup = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      buttonContainer.style.cursor = 'grab';
-      buttonContainer.style.opacity = '1';
-      containerPosition = { x: parseInt(buttonContainer.style.left), y: parseInt(buttonContainer.style.top) };
-      saveContainerPosition();
-      setTimeout(() => wasJustDragged = false, 50);
-    };
+      document.addEventListener('mouseup', () => {
+        if (!isDragging) return;
+        isDragging = false;
+        buttonContainer.style.cursor = 'grab';
+        buttonContainer.style.opacity = '1';
+        containerPosition = { x: parseInt(buttonContainer.style.left), y: parseInt(buttonContainer.style.top) };
+        saveContainerPosition();
+        setTimeout(() => wasJustDragged = false, 50);
+      });
+    }
   }
 
   function handleButtonClick(e) {
@@ -609,90 +768,305 @@
   function showWatchlistDialog() { createWatchlistDialog(extractCurrentSymbol()); }
 
   function createWatchlistDialog(symbol) {
-    // Only one instance: a stacked second dialog would duplicate the wl-N checkbox ids,
-    // making label clicks toggle the hidden dialog's checkboxes.
+    // Only one instance: a stacked second dialog would duplicate checkbox ids
     document.getElementById('tv-ext-watchlist-dialog')?.remove();
     const backdrop = document.createElement('div');
     backdrop.id = 'tv-ext-watchlist-dialog';
     backdrop.style.cssText = `position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.7); z-index: 9999999; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif;`;
     const dialog = document.createElement('div');
-    dialog.style.cssText = `background: #1e1e1e; color: #eee; padding: 24px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); min-width: 300px; max-width: 400px; max-height: 500px; border: 1px solid #333; display: flex; flex-direction: column;`;
+    dialog.style.cssText = `background: #1e1e1e; color: #eee; padding: 24px; border-radius: 8px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); width: 360px; max-width: 90vw; max-height: 540px; border: 1px solid #333; display: flex; flex-direction: column; box-sizing: border-box;`;
     dialog.innerHTML = `
       <style>
-        .tv-ext-wl-item:hover { background: #333 !important; }
+        .tv-ext-wl-item:hover { background: #2f2f2f !important; }
+        #tv-ext-new-wl-add-btn:hover { filter: brightness(1.1); }
+        #tv-ext-new-wl-cancel-btn:hover { color: #fff !important; }
+        #watchlist-close:hover { color: #fff !important; }
+        #watchlist-cancel:hover { background: #555 !important; }
+        #watchlist-save:hover:not(:disabled) { background: #43a047 !important; }
+        #watchlist-save:disabled { opacity: 0.6; cursor: not-allowed; }
+        #watchlist-checkboxes::-webkit-scrollbar { width: 6px; }
+        #watchlist-checkboxes::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        #watchlist-checkboxes::-webkit-scrollbar-thumb:hover { background: #555; }
       </style>
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h3 style="margin: 0; color: #fff; font-size: 18px;">Add to Watchlist</h3>
-        <button id="watchlist-close" style="background: none; border: none; color: #999; font-size: 20px; cursor: pointer; padding: 0; width: 24px; height: 24px;">&times;</button>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+        <h3 style="margin: 0; color: #fff; font-size: 18px; font-weight: 600;">Add to Watchlist</h3>
+        <button id="watchlist-close" style="background: none; border: none; color: #999; font-size: 22px; cursor: pointer; padding: 0; width: 24px; height: 24px; line-height: 1; display: flex; align-items: center; justify-content: center;">&times;</button>
       </div>
       <div style="margin-bottom: 16px;">
-        <label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 14px;">Symbol:</label>
-        <input type="text" id="watchlist-symbol" value="${symbol}" readonly style="width: 100%; padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; box-sizing: border-box;" />
+        <label style="display: block; margin-bottom: 8px; color: #ccc; font-size: 13px; font-weight: 500;">Symbol:</label>
+        <input type="text" id="watchlist-symbol" value="${symbol}" readonly style="width: 100%; padding: 8px 12px; background: #2a2a2a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 14px; box-sizing: border-box; outline: none;" />
       </div>
-      <div style="margin-bottom: 20px;">
-        <label style="display: block; margin-bottom: 12px; color: #ccc; font-size: 14px;">Select Watchlists:</label>
-        <div id="watchlist-checkboxes" style="max-height: 250px; overflow-y: auto; border: 1px solid #444; border-radius: 4px; background: #2a2a2a; padding: 8px;">
-          <div style="text-align: center; color: #888; padding: 20px;">Loading watchlists...</div>
+      <div style="margin-bottom: 20px; display: flex; flex-direction: column;">
+        <label style="display: block; margin-bottom: 10px; color: #ccc; font-size: 13px; font-weight: 500;">Select Watchlists:</label>
+        <div id="watchlist-checkboxes" style="max-height: 240px; overflow-y: auto; border: 1px solid #444; border-radius: 4px; background: #2a2a2a; padding: 6px; display: flex; flex-direction: column;">
+          <div style="text-align: center; color: #888; padding: 20px; font-size: 13px;">Loading watchlists...</div>
         </div>
       </div>
-      <div style="display: flex; gap: 12px; justify-content: flex-end;">
-        <button id="watchlist-cancel" style="padding: 8px 16px; background: #444; border: none; border-radius: 4px; color: #eee; cursor: pointer; font-size: 14px;">Cancel</button>
-        <button id="watchlist-save" style="padding: 8px 16px; background: #4caf50; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 14px;">Update</button>
+      <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: auto;">
+        <button id="watchlist-cancel" style="padding: 8px 16px; background: #444; border: none; border-radius: 4px; color: #eee; cursor: pointer; font-size: 14px; font-weight: 500;">Cancel</button>
+        <button id="watchlist-save" style="padding: 8px 18px; background: #4caf50; border: none; border-radius: 4px; color: white; cursor: pointer; font-size: 14px; font-weight: 600;">Update</button>
       </div>
     `;
     backdrop.appendChild(dialog);
+
     const closeBtn = dialog.querySelector('#watchlist-close');
     const cancelBtn = dialog.querySelector('#watchlist-cancel');
     const saveBtn = dialog.querySelector('#watchlist-save');
     const checkboxContainer = dialog.querySelector('#watchlist-checkboxes');
+
+    let dialogWatchlists = [];
 
     const closeDialog = () => { if(document.body.contains(backdrop)) document.body.removeChild(backdrop); };
     closeBtn.onclick = closeDialog;
     cancelBtn.onclick = closeDialog;
     backdrop.onclick = (e) => { if(e.target === backdrop) closeDialog(); };
 
-    if (chrome.runtime?.id) {
-      chrome.runtime.sendMessage({ action: "getWatchlists" }, (res) => {
-        const list = res.watchlists || [];
-        if(!list.length) { checkboxContainer.innerHTML = '<div style="text-align: center; color: #888; padding: 20px;">No watchlists found.</div>'; saveBtn.disabled = true; return; }
-        const canonical = canonicalSymbol(symbol);
-        checkboxContainer.innerHTML = list.map((wl, i) => {
-          const checked = wl.stocks && wl.stocks.some(s => canonicalSymbol(s) === canonical);
+    function escapeHtml(str) {
+      return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function renderWatchlistItems(highlightName = null) {
+      const canonical = canonicalSymbol(symbol);
+
+      // Preserve current user-selected checkbox states before re-rendering
+      const checkedMap = new Map();
+      checkboxContainer.querySelectorAll('.tv-ext-wl-item').forEach(item => {
+        const name = item.getAttribute('data-wl-name');
+        const chk = item.querySelector('input[type="checkbox"]');
+        if (name && chk) checkedMap.set(decodeURIComponent(name).toLowerCase(), chk.checked);
+      });
+
+      const bottomActionHtml = `
+        <div id="tv-ext-bottom-container" style="position: sticky; bottom: 0; background: #2a2a2a; padding: 6px 4px 2px; border-top: 1px solid #383838; margin-top: auto;">
+          <div id="tv-ext-bottom-new-wl" style="display: flex; align-items: center; gap: 6px; padding: 6px 8px; color: #00B4D8; font-size: 13px; font-weight: 500; cursor: pointer; border-radius: 4px; user-select: none; transition: background 0.15s;">
+            <span style="font-size: 15px; font-weight: 700; line-height: 1;">+</span>
+            <span>Create new watchlist</span>
+          </div>
+          <div id="tv-ext-bottom-input-row" style="display: none; gap: 6px; align-items: center; padding: 2px 0;">
+            <input type="text" id="tv-ext-new-wl-input" placeholder="New watchlist name..." style="flex: 1; min-width: 0; padding: 6px 10px; background: #1a1a1a; border: 1px solid #444; border-radius: 4px; color: #fff; font-size: 13px; outline: none; box-sizing: border-box;" />
+            <button id="tv-ext-new-wl-add-btn" type="button" style="padding: 6px 14px; background: #00B4D8; border: none; border-radius: 4px; color: #0f172a; font-weight: 600; font-size: 12px; cursor: pointer; white-space: nowrap; transition: filter 0.15s;">Add</button>
+            <button id="tv-ext-new-wl-cancel-btn" type="button" style="background: none; border: none; color: #888; font-size: 18px; cursor: pointer; padding: 0 4px; line-height: 1;" title="Cancel">&times;</button>
+          </div>
+        </div>
+      `;
+
+      if (!dialogWatchlists.length) {
+        checkboxContainer.innerHTML = `
+          <div style="text-align: center; color: #888; padding: 18px 12px; font-size: 13px;">
+            <div>No watchlists found.</div>
+          </div>
+          ${bottomActionHtml}
+        `;
+        saveBtn.disabled = true;
+      } else {
+        saveBtn.disabled = false;
+        const itemsHtml = dialogWatchlists.map((wl, i) => {
+          const lowerName = wl.name.toLowerCase();
+          let checked = false;
+          if (checkedMap.has(lowerName)) {
+            checked = checkedMap.get(lowerName);
+          } else if (wl.isNew) {
+            checked = true;
+          } else {
+            checked = wl.stocks && wl.stocks.some(s => canonicalSymbol(s) === canonical);
+          }
+
+          const encodedName = encodeURIComponent(wl.name);
+          const chkId = `tv-ext-chk-${i}`;
+          const isHighlight = highlightName && highlightName.toLowerCase() === lowerName;
+
           return `
-            <div class="tv-ext-wl-item" style="display: flex; align-items: center; padding: 8px; border-radius: 4px; transition: background 0.2s;">
-              <input type="checkbox" id="wl-${i}" ${checked ? 'checked' : ''} style="margin-right: 10px; transform: scale(1.2); accent-color: #4caf50;">
-              <label for="wl-${i}" style="color: #eee; font-size: 14px; cursor: pointer; flex: 1; user-select: none;">${wl.name}</label>
+            <div class="tv-ext-wl-item" data-wl-name="${encodedName}" style="display: flex; align-items: center; padding: 7px 8px; border-radius: 4px; transition: background 0.2s; ${isHighlight ? 'background: rgba(0, 180, 216, 0.25);' : ''}">
+              <input type="checkbox" id="${chkId}" ${checked ? 'checked' : ''} style="margin-right: 10px; transform: scale(1.15); accent-color: #4caf50; cursor: pointer;">
+              <label for="${chkId}" style="color: #eee; font-size: 14px; cursor: pointer; flex: 1; user-select: none; word-break: break-word; display: flex; align-items: center;">
+                <span>${escapeHtml(wl.name)}</span>
+                ${wl.isNew ? '<span style="font-size: 10px; font-weight: 600; color: #00B4D8; background: rgba(0, 180, 216, 0.15); padding: 1px 6px; border-radius: 3px; margin-left: 8px; text-transform: uppercase;">New</span>' : ''}
+              </label>
             </div>
           `;
         }).join('');
+
+        checkboxContainer.innerHTML = `<div style="flex: 1;">${itemsHtml}</div>` + bottomActionHtml;
+      }
+
+      // Wire up inline creation at bottom
+      const bottomTrigger = checkboxContainer.querySelector('#tv-ext-bottom-new-wl');
+      const bottomInputRow = checkboxContainer.querySelector('#tv-ext-bottom-input-row');
+      const bottomInput = checkboxContainer.querySelector('#tv-ext-new-wl-input');
+      const bottomAddBtn = checkboxContainer.querySelector('#tv-ext-new-wl-add-btn');
+      const bottomCancelBtn = checkboxContainer.querySelector('#tv-ext-new-wl-cancel-btn');
+
+      function openInput() {
+        if (!bottomTrigger || !bottomInputRow) return;
+        bottomTrigger.style.display = 'none';
+        bottomInputRow.style.display = 'flex';
+        if (bottomInput) {
+          bottomInput.focus();
+        }
+      }
+
+      function closeInput() {
+        if (!bottomTrigger || !bottomInputRow) return;
+        bottomTrigger.style.display = 'flex';
+        bottomInputRow.style.display = 'none';
+        if (bottomInput) {
+          bottomInput.value = '';
+          bottomInput.style.borderColor = '#444';
+        }
+      }
+
+      if (bottomTrigger) {
+        bottomTrigger.onclick = openInput;
+        bottomTrigger.onmouseenter = () => { bottomTrigger.style.background = 'rgba(0, 180, 216, 0.1)'; };
+        bottomTrigger.onmouseleave = () => { bottomTrigger.style.background = 'none'; };
+      }
+
+      if (bottomCancelBtn) bottomCancelBtn.onclick = closeInput;
+
+      function submitNewWatchlist() {
+        const name = bottomInput ? bottomInput.value.trim() : '';
+        if (!name) {
+          if (bottomInput) {
+            bottomInput.style.borderColor = '#ff4d4f';
+            bottomInput.focus();
+          }
+          return;
+        }
+
+        const existingIdx = dialogWatchlists.findIndex(w => w.name.trim().toLowerCase() === name.toLowerCase());
+        if (existingIdx !== -1) {
+          const existingWl = dialogWatchlists[existingIdx];
+          closeInput();
+          renderWatchlistItems(existingWl.name);
+          return;
+        }
+
+        const newWl = {
+          name: name,
+          stocks: [],
+          lastSelected: null,
+          isNew: true
+        };
+        dialogWatchlists.unshift(newWl);
+        renderWatchlistItems(name);
+        checkboxContainer.scrollTop = 0;
+      }
+
+      if (bottomAddBtn) bottomAddBtn.onclick = submitNewWatchlist;
+      if (bottomInput) {
+        bottomInput.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitNewWatchlist();
+          } else if (e.key === 'Escape') {
+            closeInput();
+          } else {
+            bottomInput.style.borderColor = '#444';
+          }
+        };
+      }
+
+      if (highlightName) {
+        const highlightedEl = checkboxContainer.querySelector(`[data-wl-name="${encodeURIComponent(highlightName)}"]`);
+        if (highlightedEl) {
+          highlightedEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          setTimeout(() => { if (highlightedEl) highlightedEl.style.background = ''; }, 1500);
+        }
+      }
+    }
+
+    if (chrome.runtime?.id) {
+      chrome.runtime.sendMessage({ action: "getWatchlists" }, (res) => {
+        dialogWatchlists = (res.watchlists || []).map(wl => ({
+          ...wl,
+          stocks: wl.stocks ? [...wl.stocks] : []
+        }));
+        renderWatchlistItems();
       });
     }
 
     saveBtn.onclick = () => {
       if (!chrome.runtime?.id) return;
-      saveBtn.disabled = true; // a second click would race a second read-modify-write
+      saveBtn.disabled = true; // prevent duplicate clicks
+
+      // If user typed a name into the bottom input field but didn't click "Add", include it automatically
+      const pendingInput = dialog.querySelector('#tv-ext-new-wl-input');
+      const inputRow = dialog.querySelector('#tv-ext-bottom-input-row');
+      const pendingName = pendingInput ? pendingInput.value.trim() : '';
+      if (pendingName && inputRow && inputRow.style.display !== 'none') {
+        const exists = dialogWatchlists.some(w => w.name.trim().toLowerCase() === pendingName.toLowerCase());
+        if (!exists) {
+          dialogWatchlists.unshift({
+            name: pendingName,
+            stocks: [],
+            lastSelected: null,
+            isNew: true
+          });
+          renderWatchlistItems(pendingName);
+        }
+      }
+
       const s = normalizeSymbol(dialog.querySelector('#watchlist-symbol').value.trim());
       const target = canonicalSymbol(s);
+
       chrome.runtime.sendMessage({ action: "getWatchlists" }, (res) => {
+        let storedWatchlists = res.watchlists || [];
         let change = false;
-        res.watchlists.forEach((wl, i) => {
-          const chk = dialog.querySelector(`#wl-${i}`);
-          if(!chk) return;
+
+        // 1. Merge any new watchlists from dialogWatchlists into storedWatchlists
+        dialogWatchlists.forEach(dwl => {
+          const exists = storedWatchlists.some(swl => swl.name.trim().toLowerCase() === dwl.name.trim().toLowerCase());
+          if (!exists) {
+            storedWatchlists.push({
+              name: dwl.name,
+              stocks: [],
+              lastSelected: null
+            });
+            change = true;
+          }
+        });
+
+        // 2. Read checkboxes from dialog and update stock membership
+        storedWatchlists.forEach(wl => {
+          const encoded = encodeURIComponent(wl.name);
+          let itemEl = checkboxContainer.querySelector(`.tv-ext-wl-item[data-wl-name="${encoded}"]`);
+          if (!itemEl) {
+            const items = Array.from(checkboxContainer.querySelectorAll('.tv-ext-wl-item'));
+            itemEl = items.find(el => decodeURIComponent(el.getAttribute('data-wl-name') || '').toLowerCase() === wl.name.trim().toLowerCase());
+          }
+          const chk = itemEl?.querySelector('input[type="checkbox"]');
+          if (!chk) return;
+
           const idx = wl.stocks ? wl.stocks.findIndex(x => canonicalSymbol(x) === target) : -1;
-          if(chk.checked && idx === -1) { if(!wl.stocks) wl.stocks=[]; wl.stocks.push(s); change=true; }
-          if(!chk.checked && idx !== -1) {
+          if (chk.checked && idx === -1) {
+            if (!wl.stocks) wl.stocks = [];
+            wl.stocks.push(s);
+            change = true;
+          }
+          if (!chk.checked && idx !== -1) {
             const removed = wl.stocks[idx];
             wl.stocks.splice(idx, 1);
             if (wl.stockNotes) {
               delete wl.stockNotes[removed];
               const rc = canonicalSymbol(removed);
-              for (const k of Object.keys(wl.stockNotes)) { if (canonicalSymbol(k) === rc) delete wl.stockNotes[k]; }
+              for (const k of Object.keys(wl.stockNotes)) {
+                if (canonicalSymbol(k) === rc) delete wl.stockNotes[k];
+              }
             }
-            change=true;
+            change = true;
           }
         });
+
         closeDialog();
-        if(change) chrome.runtime.sendMessage({ action: "updateWatchlists", watchlists: res.watchlists }, () => showGlobalToast("Watchlists updated", "info"));
+        if (change) {
+          chrome.runtime.sendMessage({ action: "updateWatchlists", watchlists: storedWatchlists }, () => {
+            showGlobalToast("Watchlists updated", "info");
+          });
+        }
       });
     };
     document.body.appendChild(backdrop);
@@ -703,13 +1077,33 @@
       createSidepanelDock();
     });
     addButtons();
+    injectRightToolbarButton();
+
+    let toolbarTries = 0;
+    const toolbarTimer = setInterval(() => {
+      toolbarTries++;
+      if (!document.getElementById(TOOLBAR_BTN_ID)) {
+        injectRightToolbarButton();
+      }
+      if (toolbarTries > 30 && document.getElementById(TOOLBAR_BTN_ID)) {
+        clearInterval(toolbarTimer);
+      }
+    }, 500);
+
     let lastUrl = location.href;
     new MutationObserver(() => {
       if (location.href !== lastUrl) {
         lastUrl = location.href;
-        setTimeout(() => { if (!document.getElementById('tradingview-button-container')) addButtons(); }, 2000);
+        setTimeout(() => {
+          if (!document.getElementById('tradingview-button-container')) addButtons();
+          if (!document.getElementById(TOOLBAR_BTN_ID)) injectRightToolbarButton();
+        }, 1500);
+      } else {
+        if (!document.getElementById(TOOLBAR_BTN_ID)) {
+          injectRightToolbarButton();
+        }
       }
-    }).observe(document, { subtree: true, childList: true });
+    }).observe(document.body || document.documentElement, { subtree: true, childList: true });
   }
 
 })();

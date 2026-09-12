@@ -1,8 +1,6 @@
 const container = document.getElementById("watchlistContainer");
 const newBtn = document.getElementById("newBtn");
 const importBtn = document.getElementById("importBtn");
-const renameBtn = document.getElementById("renameBtn");
-const deleteBtn = document.getElementById("deleteBtn");
 const settingsBtn = document.getElementById("settingsBtn");
 const settingsModal = document.getElementById("settingsModal");
 const closeSettings = document.getElementById("closeSettings");
@@ -349,6 +347,7 @@ function sortStocksAlphabetically() {
 
 // ----------------- RENDER -----------------
 function renderWatchlists(list) {
+  closeWatchlistMenu();
   container.innerHTML = "";
   if (!list || list.length === 0) {
     const empty = document.createElement("li");
@@ -368,6 +367,10 @@ function renderWatchlists(list) {
     nameSpan.title = wl.name;
     li.appendChild(nameSpan);
 
+    const rightGroup = document.createElement("div");
+    rightGroup.className = "watchlist-actions-group";
+    rightGroup.style.cssText = "display: flex; align-items: center; gap: 4px; flex-shrink: 0;";
+
     // Watchlists imported from Chartink carry their screener URL — offer one-click re-sync.
     if (wl.chartinkUrl) {
       const sync = document.createElement("button");
@@ -378,8 +381,26 @@ function renderWatchlists(list) {
         e.stopPropagation();
         resyncWatchlistFromChartink(wl, sync);
       });
-      li.appendChild(sync);
+      rightGroup.appendChild(sync);
     }
+
+    const moreBtn = document.createElement("button");
+    moreBtn.className = "watchlist-more-btn";
+    moreBtn.title = "Options";
+    moreBtn.innerHTML = `
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+        <circle cx="12" cy="5" r="2"></circle>
+        <circle cx="12" cy="12" r="2"></circle>
+        <circle cx="12" cy="19" r="2"></circle>
+      </svg>
+    `;
+    moreBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      showWatchlistMenu(moreBtn, i, wl);
+    });
+    rightGroup.appendChild(moreBtn);
+
+    li.appendChild(rightGroup);
 
     li.addEventListener("click", () => { selectedIndex = i; saveLastSelectedWatchlist(i); renderWatchlists(list); updateActionButtons(); });
     li.addEventListener("dblclick", () => { selectedIndex = i; saveLastSelectedWatchlist(i); openStocksView(i); });
@@ -396,7 +417,7 @@ function renderWatchlists(list) {
 function resyncWatchlistFromChartink(wl, btn) {
   if (btn) btn.classList.add('syncing');
   showToast(`Re-syncing "${wl.name}" from Chartink…`, 3000);
-  chrome.runtime.sendMessage({ action: "importFromChartinkUrl", url: wl.chartinkUrl }, (res) => {
+  chrome.runtime.sendMessage({ action: "importFromChartinkUrl", url: wl.chartinkUrl, mode: "resync" }, (res) => {
     if (btn) btn.classList.remove('syncing');
     if (chrome.runtime.lastError) { showToast("Re-sync failed: " + chrome.runtime.lastError.message); return; }
     if (res && res.success) {
@@ -409,8 +430,6 @@ function resyncWatchlistFromChartink(wl, btn) {
 
 function updateActionButtons() {
   newBtn.style.display = 'flex'; importBtn.style.display = 'flex'; settingsBtn.style.display = 'flex';
-  const show = selectedIndex !== null ? 'flex' : 'none';
-  renameBtn.style.display = show; deleteBtn.style.display = show;
 }
 
 function openStocksView(index) {
@@ -788,7 +807,7 @@ async function openTradingView(stock) {
       const activeTvTab = tabs.find(t => t.active) || tabs.find(t => t.url && t.url.includes('/chart/')) || tabs[0];
       if (activeTvTab) {
         if (!activeTvTab.url || !activeTvTab.url.includes('/chart/')) {
-          const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+          const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
           chrome.tabs.update(activeTvTab.id, { url, active: true }, () => {
             if (activeTvTab.windowId) {
               chrome.windows.update(activeTvTab.windowId, { focused: true });
@@ -801,7 +820,7 @@ async function openTradingView(stock) {
         const sendMessage = () => {
           chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: tvSymbol }, (response) => {
             if (chrome.runtime.lastError) {
-              const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+              const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
               chrome.tabs.update(activeTvTab.id, { url });
             }
           });
@@ -819,7 +838,7 @@ async function openTradingView(stock) {
 }
 
 function createTradingViewTabWithSymbol(tvSymbol) {
-  const url = `https://www.tradingview.com/chart/?symbol=${tvSymbol}`;
+  const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
   chrome.tabs.create({ url }, (tab) => { tradingviewTabId = tab.id; });
 }
 
@@ -875,8 +894,9 @@ function showImportMenu(anchorBtn, target) {
   const menu = document.createElement('div');
   menu.className = 'import-menu';
   menu.innerHTML = `
-    <div class="import-menu-item" data-act="csv">Import from CSV</div>
-    <div class="import-menu-item" data-act="chartink">Import from Chartink</div>`;
+    <div class="import-menu-item" data-act="csv">From CSV</div>
+    <div class="import-menu-item" data-act="txt">From TXT</div>
+    <div class="import-menu-item" data-act="chartink">From Chartink</div>`;
   document.body.appendChild(menu);
   importMenuEl = menu;
   importMenuAnchor = anchorBtn;
@@ -889,7 +909,8 @@ function showImportMenu(anchorBtn, target) {
     item.onclick = () => {
       const act = item.dataset.act;
       closeImportMenu();
-      if (act === 'csv') importFromCsv(target);
+      if (act === 'csv') importFromFile(target, 'csv');
+      else if (act === 'txt') importFromFile(target, 'txt');
       else importFromChartink(target);
     };
   });
@@ -897,9 +918,14 @@ function showImportMenu(anchorBtn, target) {
   setTimeout(() => document.addEventListener('click', onDocClickForImportMenu, true), 0);
 }
 
+function importFromFile(target, type) {
+  const input = target === 'current' ? csvInput : importCsvInput;
+  input.accept = type === 'txt' ? '.txt,text/plain' : '.csv,text/csv';
+  input.click();
+}
+
 function importFromCsv(target) {
-  if (target === 'current') csvInput.click();   // fills the open watchlist
-  else importCsvInput.click();                   // creates a watchlist named after the file
+  importFromFile(target, 'csv');
 }
 
 async function importFromChartink(target) {
@@ -942,23 +968,38 @@ function applySymbolsToCurrentWatchlist(symbols, sourceName, chartinkUrl) {
   });
 }
 
-function parseCsvSymbols(text) {
-  let syms = text.split(/\r?\n/)
-    .map((l) => (l.split(',')[0] || '').trim().replace(/^["']|["']$/g, '').toUpperCase())
+function parseCsvSymbols(text, filename = '') {
+  if (!text || typeof text !== 'string') return [];
+  const rawLines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  if (!rawLines.length) return [];
+
+  const isTxt = /\.txt$/i.test(filename);
+  if (isTxt || rawLines.length === 1) {
+    const allTokens = text.split(/[\r\n,]+/)
+      .map((s) => s.trim().replace(/^['"]|['"]$/g, '').toUpperCase())
+      .filter(Boolean);
+    if (isTxt || (rawLines.length === 1 && rawLines[0].includes(','))) {
+      let syms = allTokens.filter((s) => !/^(SYMBOL|SYMBOLS|TICKER|TICKERS)$/.test(s));
+      return Array.from(new Set(syms));
+    }
+  }
+
+  let syms = rawLines
+    .map((l) => (l.split(',')[0] || '').trim().replace(/^['"]|['"]$/g, '').toUpperCase())
     .filter(Boolean);
-  if (syms.length && /^(SYMBOL|SYMBOLS|TICKER)$/.test(syms[0])) syms = syms.slice(1);
+  if (syms.length && /^(SYMBOL|SYMBOLS|TICKER|TICKERS)$/.test(syms[0])) syms = syms.slice(1);
   return Array.from(new Set(syms));
 }
 
-// Menu CSV import → create/overwrite a watchlist named after the file.
+// Menu file import → create/overwrite a watchlist named after the file.
 importCsvInput.onchange = (e) => {
   const file = e.target.files[0]; if (!file) return;
-  const baseName = (file.name.replace(/\.csv$/i, '').trim()) || 'Imported';
+  const baseName = (file.name.replace(/\.(csv|txt)$/i, '').trim()) || 'Imported';
   const reader = new FileReader();
   reader.onload = (ev) => {
-    const symbols = parseCsvSymbols(ev.target.result);
+    const symbols = parseCsvSymbols(ev.target.result, file.name);
     importCsvInput.value = "";
-    if (!symbols.length) { showToast('No symbols found in the CSV'); return; }
+    if (!symbols.length) { showToast('No symbols found in the file'); return; }
     chrome.storage.local.get("watchlists", (data) => {
       const watchlists = data.watchlists || [];
       const existing = watchlists.find((w) => w.name === baseName);
@@ -1163,26 +1204,200 @@ themeLight.onclick = () => setTheme('light');
 
 
 
-renameBtn.onclick = () => {
-  if (selectedIndex === null) return showToast("Select a watchlist first");
-  chrome.storage.local.get("watchlists", async ({ watchlists }) => {
-    const name = await uiPrompt("Rename watchlist", watchlists[selectedIndex].name, "Watchlist name");
-    if (name) { watchlists[selectedIndex].name = name; chrome.storage.local.set({ watchlists }, () => renderWatchlists(watchlists)); }
-  });
-};
+// ----------------- WATCHLIST 3-DOTS MENU & ACTIONS -----------------
+let watchlistMenuEl = null;
+let watchlistMenuAnchor = null;
 
-deleteBtn.onclick = async () => {
-  if (selectedIndex === null) return showToast("Select a watchlist first");
-  if (await uiConfirm("Delete this watchlist?", { okText: "Delete", danger: true })) {
-    chrome.storage.local.get("watchlists", ({ watchlists }) => {
-      watchlists.splice(selectedIndex, 1); selectedIndex = null;
-      saveLastSelectedWatchlist(null);
-      chrome.storage.local.set({ watchlists }, () => renderWatchlists(watchlists));
-    });
+function closeWatchlistMenu() {
+  if (watchlistMenuEl) {
+    watchlistMenuEl.remove();
+    watchlistMenuEl = null;
   }
-};
+  if (watchlistMenuAnchor) {
+    watchlistMenuAnchor.classList.remove('active');
+    watchlistMenuAnchor = null;
+  }
+  document.removeEventListener('click', onDocClickForWatchlistMenu, true);
+  window.removeEventListener('scroll', closeWatchlistMenu, true);
+  window.removeEventListener('resize', closeWatchlistMenu);
+}
+
+function onDocClickForWatchlistMenu(e) {
+  if (watchlistMenuEl && !watchlistMenuEl.contains(e.target) && watchlistMenuAnchor && !watchlistMenuAnchor.contains(e.target)) {
+    closeWatchlistMenu();
+  }
+}
+
+function showWatchlistMenu(anchorBtn, index, wl) {
+  if (watchlistMenuEl && watchlistMenuAnchor === anchorBtn) {
+    closeWatchlistMenu();
+    return;
+  }
+  closeWatchlistMenu();
+
+  anchorBtn.classList.add('active');
+  watchlistMenuAnchor = anchorBtn;
+
+  const menu = document.createElement('div');
+  menu.className = 'watchlist-menu';
+  menu.innerHTML = `
+    <div class="watchlist-menu-item" data-act="rename">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+      </svg>
+      <span>Rename</span>
+    </div>
+    <div class="watchlist-menu-item has-submenu" data-act="export">
+      <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        <span>Export</span>
+      </div>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.6; margin-left: 6px;">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+      <div class="watchlist-submenu">
+        <div class="watchlist-menu-item" data-act="export-csv">
+          <span>as CSV</span>
+        </div>
+        <div class="watchlist-menu-item" data-act="export-txt">
+          <span>as TXT</span>
+        </div>
+      </div>
+    </div>
+    <div class="watchlist-menu-item danger" data-act="delete">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"></polyline>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+      </svg>
+      <span>Delete</span>
+    </div>
+  `;
+  document.body.appendChild(menu);
+  watchlistMenuEl = menu;
+
+  const r = anchorBtn.getBoundingClientRect();
+  const menuWidth = 130;
+  const submenuWidth = 85;
+  const maxLeft = Math.max(8, window.innerWidth - menuWidth - 6);
+  let menuLeft = Math.min(r.right - menuWidth + 10, maxLeft);
+  if (menuLeft < submenuWidth + 8 && maxLeft >= submenuWidth + 8) {
+    menuLeft = maxLeft;
+  } else {
+    menuLeft = Math.max(8, menuLeft);
+  }
+  menu.style.left = menuLeft + 'px';
+
+  const menuHeight = 110;
+  if (r.bottom + menuHeight > window.innerHeight) {
+    menu.style.bottom = Math.max(8, window.innerHeight - r.top + 4) + 'px';
+  } else {
+    menu.style.top = (r.bottom + 4) + 'px';
+  }
+
+  // Ensure submenu always opens on the left side
+  const submenu = menu.querySelector('.watchlist-submenu');
+  if (submenu) {
+    submenu.style.right = '100%';
+    submenu.style.left = 'auto';
+    submenu.style.marginRight = '4px';
+    submenu.style.marginLeft = '0';
+  }
+
+  menu.querySelector('[data-act="rename"]').onclick = (e) => {
+    e.stopPropagation();
+    closeWatchlistMenu();
+    renameWatchlistByIndex(index);
+  };
+
+  menu.querySelector('[data-act="export-csv"]').onclick = (e) => {
+    e.stopPropagation();
+    closeWatchlistMenu();
+    exportWatchlistByIndex(index, 'csv');
+  };
+
+  menu.querySelector('[data-act="export-txt"]').onclick = (e) => {
+    e.stopPropagation();
+    closeWatchlistMenu();
+    exportWatchlistByIndex(index, 'txt');
+  };
+
+  menu.querySelector('[data-act="delete"]').onclick = (e) => {
+    e.stopPropagation();
+    closeWatchlistMenu();
+    deleteWatchlistByIndex(index);
+  };
+
+  setTimeout(() => {
+    document.addEventListener('click', onDocClickForWatchlistMenu, true);
+    window.addEventListener('scroll', closeWatchlistMenu, true);
+    window.addEventListener('resize', closeWatchlistMenu);
+  }, 0);
+}
+
+function exportWatchlistByIndex(index, format) {
+  chrome.storage.local.get("watchlists", ({ watchlists }) => {
+    if (!watchlists || !watchlists[index]) return;
+    const wl = watchlists[index];
+    const stocks = wl.stocks || [];
+    if (!stocks.length) {
+      showToast(`"${wl.name}" is empty`);
+      return;
+    }
+    const content = stocks.join('\r\n');
+    const mimeType = format === 'csv' ? 'text/csv;charset=utf-8;' : 'text/plain;charset=utf-8;';
+    const blob = new Blob([content], { type: mimeType });
+    const safeName = wl.name.replace(/[/\\?%*:|"<>]/g, '_').trim() || 'Watchlist';
+    const filename = `${safeName}.${format}`;
+
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+
+    showToast(`Exported "${wl.name}" (${stocks.length} stocks)`);
+  });
+}
+
+function renameWatchlistByIndex(index) {
+  chrome.storage.local.get("watchlists", async ({ watchlists }) => {
+    if (!watchlists || !watchlists[index]) return;
+    const currentName = watchlists[index].name;
+    const name = await uiPrompt("Rename watchlist", currentName, "Watchlist name");
+    if (name && name.trim() && name.trim() !== currentName) {
+      watchlists[index].name = name.trim();
+      chrome.storage.local.set({ watchlists }, () => renderWatchlists(watchlists));
+    }
+  });
+}
+
+async function deleteWatchlistByIndex(index) {
+  chrome.storage.local.get("watchlists", async ({ watchlists }) => {
+    if (!watchlists || !watchlists[index]) return;
+    const targetWl = watchlists[index];
+    if (await uiConfirm(`Delete "${targetWl.name}"?`, { okText: "Delete", danger: true })) {
+      watchlists.splice(index, 1);
+      if (selectedIndex === index) {
+        selectedIndex = null;
+        saveLastSelectedWatchlist(null);
+      } else if (selectedIndex !== null && selectedIndex > index) {
+        selectedIndex--;
+        saveLastSelectedWatchlist(selectedIndex);
+      }
+      chrome.storage.local.set({ watchlists }, () => renderWatchlists(watchlists));
+    }
+  });
+}
 
 backBtn.onclick = () => {
+  closeWatchlistMenu();
   stocksView.style.display = "none"; watchlistView.style.display = "flex";
   currentWatchlistIndex = null; allStocks = [];
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
@@ -1194,14 +1409,14 @@ backBtn.onclick = () => {
 sortBtn.onclick = () => sortStocksAlphabetically();
 clearAllBtn.onclick = () => clearAllStocks();
 
-// Stocks-view CSV import → fills the currently open watchlist.
+// Stocks-view file import → fills the currently open watchlist.
 csvInput.onchange = (e) => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = (ev) => {
-    const symbols = parseCsvSymbols(ev.target.result);
+    const symbols = parseCsvSymbols(ev.target.result, file.name);
     csvInput.value = "";
-    if (!symbols.length) { showToast('No symbols found in the CSV'); return; }
+    if (!symbols.length) { showToast('No symbols found in the file'); return; }
     chrome.storage.local.get("watchlists", ({ watchlists }) => {
       if (!watchlists[currentWatchlistIndex]) return;
       watchlists[currentWatchlistIndex].stocks = symbols; allStocks = [...symbols];

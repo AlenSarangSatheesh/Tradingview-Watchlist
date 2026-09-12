@@ -83,7 +83,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (activeTvTab) {
           chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: request.symbol }, () => {
             if (chrome.runtime.lastError) {
-              const url = `https://www.tradingview.com/chart/?symbol=${request.symbol}`;
+              const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(request.symbol)}`;
               chrome.tabs.update(activeTvTab.id, { url });
             }
           });
@@ -100,27 +100,51 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 // Locate or open the screener tab, wait for it to load, then ask its content script to
 // extract the screener and build the watchlist; relay the result back to the side panel.
 async function handleChartinkImport(url, mode) {
+  const isResync = (mode === 'resync');
+  let tab = null;
+  let shouldClose = false;
+
   try {
     if (!/^https?:\/\/(www\.)?chartink\.com\/screener\/.+/i.test(url || "")) {
       return { success: false, error: "Invalid Chartink screener URL" };
     }
 
-    const tabs = await chrome.tabs.query({
-      url: ["*://chartink.com/screener/*", "*://www.chartink.com/screener/*"]
-    });
-    let tab = tabs.find((t) => t.url && samePath(t.url, url));
+    if (isResync) {
+      // Clean up any existing Chartink tab for this screener so we start fresh
+      const tabs = await chrome.tabs.query({
+        url: ["*://chartink.com/screener/*", "*://www.chartink.com/screener/*"]
+      });
+      const existing = tabs.find((t) => t.url && samePath(t.url, url));
+      if (existing) {
+        chrome.tabs.remove(existing.id).catch(() => {});
+      }
 
-    if (!tab) {
-      tab = await chrome.tabs.create({ url, active: true });
-      await waitForTabComplete(tab.id);
+      // Open new tab strictly in background so user focus is never stolen from TradingView
+      tab = await chrome.tabs.create({ url, active: false });
+      shouldClose = true;
     } else {
-      await chrome.tabs.update(tab.id, { url, active: true });
-      await waitForTabComplete(tab.id);
+      const tabs = await chrome.tabs.query({
+        url: ["*://chartink.com/screener/*", "*://www.chartink.com/screener/*"]
+      });
+      tab = tabs.find((t) => t.url && samePath(t.url, url));
+
+      if (!tab) {
+        tab = await chrome.tabs.create({ url, active: true });
+      } else {
+        await chrome.tabs.update(tab.id, { url, active: true });
+      }
     }
 
-    return await sendImportMessage(tab.id, mode);
+    await waitForTabComplete(tab.id);
+
+    const result = await sendImportMessage(tab.id, mode);
+    return result;
   } catch (e) {
     return { success: false, error: String((e && e.message) || e) };
+  } finally {
+    if (shouldClose && tab?.id) {
+      chrome.tabs.remove(tab.id).catch(() => {});
+    }
   }
 }
 
@@ -150,7 +174,7 @@ function waitForTabComplete(tabId, timeout = 20000) {
   });
 }
 
-function sendImportMessage(tabId, mode, attempts = 8) {
+function sendImportMessage(tabId, mode, attempts = 15) {
   return new Promise((resolve) => {
     const tryOnce = (n) => {
       chrome.tabs.sendMessage(tabId, { action: "importScreener", mode }, (response) => {

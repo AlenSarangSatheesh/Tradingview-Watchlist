@@ -113,12 +113,14 @@
   function saveToWatchlist(name, symbols) {
     return new Promise((resolve) => {
       if (!chrome.runtime?.id) return resolve({ ok: false });
+      const norm = (u) => (u || '').replace(/\/+$/, '').toLowerCase();
       const pageUrl = location.origin + location.pathname;
+      const normPageUrl = norm(pageUrl);
       chrome.runtime.sendMessage({ action: 'getWatchlists' }, (res) => {
         if (chrome.runtime.lastError || !res) return resolve({ ok: false });
         const watchlists = res.watchlists || [];
         // Match by screener URL first (survives renames), then by name.
-        const existing = watchlists.find((w) => w.chartinkUrl === pageUrl) ||
+        const existing = watchlists.find((w) => norm(w.chartinkUrl) === normPageUrl) ||
                          watchlists.find((w) => w.name === name && !w.chartinkUrl);
         let savedName = name;
         if (existing) {

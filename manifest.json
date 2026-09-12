@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Unlimited Watchlists for TradingView",
   "description": "Free unlimited watchlists for TradingView in a side panel. One-click charts, Chartink screener import, CSV import & export.",
-  "version": "1.5",
+  "version": "1.6",
   "permissions": ["storage", "tabs", "activeTab", "scripting"],
 
   "host_permissions": [
@@ -75,7 +75,9 @@
         "sidepanel.html",
         "sidepanel.js",
         "Images/*",
-        "icons/*"
+        "icons/*",
+        "media/*",
+        "media/tutorial/*"
       ],
       "matches": [
         "https://www.tradingview.com/*",

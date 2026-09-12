@@ -290,6 +290,16 @@ h2 {
   padding: 2px;
   flex-shrink: 0;
   margin-left: 8px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.watchlist li:hover .delete-btn-right,
+.watchlist li .delete-btn-right:focus {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 .delete-btn-right:hover {
