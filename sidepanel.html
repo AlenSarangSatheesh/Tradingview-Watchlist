@@ -172,6 +172,63 @@ h2 {
   padding: 0 10px;
 }
 
+.watchlist-title-wrap {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.watchlist-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  padding: 4px 7px;
+  margin-left: 4px;
+  border-radius: 5px;
+  user-select: none;
+  transition: background 0.15s ease;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.watchlist-dropdown-trigger:hover,
+.watchlist-dropdown-trigger.active {
+  background: var(--btn-hover);
+}
+
+.watchlist-dropdown-trigger:focus-visible {
+  outline: 1px solid var(--focus);
+}
+
+#stocksView #watchlistTitle {
+  padding: 0;
+  font-size: 15px;
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dropdown-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.2s ease, color 0.15s ease;
+}
+
+.watchlist-dropdown-trigger:hover .dropdown-chevron,
+.watchlist-dropdown-trigger.active .dropdown-chevron {
+  color: var(--text);
+}
+
+.watchlist-dropdown-trigger.active .dropdown-chevron {
+  transform: rotate(180deg);
+}
+
 /* Search container styling */
 .search-container {
   padding: 6px 10px;
@@ -722,6 +779,126 @@ h2 {
   border-top: 1px solid var(--border);
 }
 
+/* Watchlist switcher dropdown menu */
+.watchlist-switcher-menu {
+  position: fixed;
+  background: var(--menu-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  z-index: 4000;
+  min-width: 190px;
+  max-width: 290px;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.watchlist-switcher-header {
+  padding: 6px 10px 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.watchlist-switcher-search {
+  padding: 2px 4px 5px 4px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3px;
+}
+
+.watchlist-switcher-input {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--input-bg);
+  border: 1px solid var(--border-2);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.watchlist-switcher-input:focus {
+  border-color: var(--focus);
+}
+
+.watchlist-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.watchlist-switcher-item:hover {
+  background: var(--menu-hover);
+}
+
+.watchlist-switcher-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.watchlist-switcher-check {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent);
+}
+
+.watchlist-switcher-name {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watchlist-switcher-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--btn-bg);
+  padding: 2px 6px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  font-weight: normal;
+}
+
+.watchlist-switcher-item.active .watchlist-switcher-count {
+  background: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.watchlist-switcher-empty {
+  padding: 10px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+
 /* Settings modal */
 .settings-modal {
   position: fixed;
@@ -953,6 +1130,7 @@ body.light .settings-mail:hover {
 }
 
 @media (max-width: 170px) {
+  #stocksView .watchlist-title-wrap,
   #stocksView #watchlistTitle {
     display: none;
   }
@@ -1154,7 +1332,14 @@ body.light .settings-mail:hover {
         <img src="Images/Back.png" alt="Back" class="icon">
         <div class="tooltip">Back</div>
       </button>
-      <h2 id="watchlistTitle"></h2>
+      <div class="watchlist-title-wrap">
+        <div id="watchlistDropdownTrigger" class="watchlist-dropdown-trigger" role="button" tabindex="0" title="Switch watchlist">
+          <h2 id="watchlistTitle"></h2>
+          <svg class="dropdown-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+      </div>
       <div class="actions">
         <input type="file" id="csvInput" accept=".csv,.txt" style="display:none;">
         <button id="sortBtn">

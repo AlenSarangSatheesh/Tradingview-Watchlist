@@ -16,6 +16,7 @@ const watchlistView = document.getElementById("watchlistView");
 const stocksView = document.getElementById("stocksView");
 const backBtn = document.getElementById("backBtn");
 const watchlistTitle = document.getElementById("watchlistTitle");
+const watchlistDropdownTrigger = document.getElementById("watchlistDropdownTrigger");
 const csvInput = document.getElementById("csvInput");
 const importCsvInput = document.getElementById("importCsvInput");
 const importStocksBtn = document.getElementById("importStocksBtn");
@@ -433,6 +434,7 @@ function updateActionButtons() {
 }
 
 function openStocksView(index) {
+  closeWatchlistSwitcherMenu();
   chrome.storage.local.get("watchlists", async ({ watchlists }) => {
     const wl = watchlists[index]; if (!wl) return;
     currentWatchlistIndex = index; watchlistTitle.textContent = wl.name; watchlistTitle.title = wl.name; allStocks = [...(wl.stocks || [])];
@@ -867,6 +869,166 @@ newBtn.onclick = async () => {
   }
 };
 
+// ----------------- WATCHLIST SWITCHER DROPDOWN -----------------
+let switcherMenuEl = null;
+
+function closeWatchlistSwitcherMenu() {
+  if (switcherMenuEl) {
+    switcherMenuEl.remove();
+    switcherMenuEl = null;
+  }
+  if (watchlistDropdownTrigger) {
+    watchlistDropdownTrigger.classList.remove('active');
+  }
+  document.removeEventListener('click', onDocClickForSwitcher, true);
+  document.removeEventListener('keydown', onKeyDownForSwitcher, true);
+  window.removeEventListener('scroll', closeWatchlistSwitcherMenu, true);
+  window.removeEventListener('resize', closeWatchlistSwitcherMenu);
+}
+
+function onDocClickForSwitcher(e) {
+  if (switcherMenuEl && !switcherMenuEl.contains(e.target) && watchlistDropdownTrigger && !watchlistDropdownTrigger.contains(e.target)) {
+    closeWatchlistSwitcherMenu();
+  }
+}
+
+function onKeyDownForSwitcher(e) {
+  if (e.key === 'Escape') {
+    closeWatchlistSwitcherMenu();
+  }
+}
+
+function showWatchlistSwitcherMenu() {
+  if (switcherMenuEl) {
+    closeWatchlistSwitcherMenu();
+    return;
+  }
+  closeWatchlistMenu();
+  closeImportMenu();
+
+  chrome.storage.local.get("watchlists", ({ watchlists = [] }) => {
+    if (!watchlists || watchlists.length === 0) return;
+
+    if (watchlistDropdownTrigger) {
+      watchlistDropdownTrigger.classList.add('active');
+    }
+
+    const menu = document.createElement('div');
+    menu.className = 'watchlist-switcher-menu';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'watchlist-switcher-header';
+    header.innerHTML = `<span>Switch Watchlist</span><span>${watchlists.length}</span>`;
+    menu.appendChild(header);
+
+    // If more than 6 watchlists, show a search filter
+    let searchInput = null;
+    if (watchlists.length > 6) {
+      const searchContainer = document.createElement('div');
+      searchContainer.className = 'watchlist-switcher-search';
+      searchInput = document.createElement('input');
+      searchInput.type = 'text';
+      searchInput.className = 'watchlist-switcher-input';
+      searchInput.placeholder = 'Filter watchlists...';
+      searchContainer.appendChild(searchInput);
+      menu.appendChild(searchContainer);
+    }
+
+    const listContainer = document.createElement('div');
+    listContainer.className = 'watchlist-switcher-list';
+
+    function renderSwitcherItems(filter = '') {
+      listContainer.innerHTML = '';
+      const filterLower = filter.toLowerCase().trim();
+      let matchedCount = 0;
+
+      watchlists.forEach((wl, idx) => {
+        if (filterLower && !wl.name.toLowerCase().includes(filterLower)) {
+          return;
+        }
+        matchedCount++;
+        const item = document.createElement('div');
+        item.className = 'watchlist-switcher-item';
+        const isActive = idx === currentWatchlistIndex;
+        if (isActive) item.classList.add('active');
+
+        const stockCount = (wl.stocks && wl.stocks.length) || 0;
+
+        item.innerHTML = `
+          <span class="watchlist-switcher-check">${isActive ? '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}</span>
+          <span class="watchlist-switcher-name" title="${wl.name}">${wl.name}</span>
+          <span class="watchlist-switcher-count">${stockCount}</span>
+        `;
+
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          closeWatchlistSwitcherMenu();
+          if (idx !== currentWatchlistIndex) {
+            selectedIndex = idx;
+            saveLastSelectedWatchlist(idx);
+            openStocksView(idx);
+          }
+        });
+
+        listContainer.appendChild(item);
+      });
+
+      if (matchedCount === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'watchlist-switcher-empty';
+        empty.textContent = 'No matching watchlists';
+        listContainer.appendChild(empty);
+      }
+    }
+
+    renderSwitcherItems();
+    menu.appendChild(listContainer);
+    document.body.appendChild(menu);
+    switcherMenuEl = menu;
+
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        renderSwitcherItems(e.target.value);
+      });
+      setTimeout(() => searchInput.focus(), 50);
+    }
+
+    // Position menu relative to trigger
+    const r = watchlistDropdownTrigger.getBoundingClientRect();
+    const menuWidth = Math.min(Math.max(r.width + 40, 200), window.innerWidth - 16);
+    menu.style.width = menuWidth + 'px';
+    let left = r.left;
+    if (left + menuWidth > window.innerWidth - 8) {
+      left = window.innerWidth - menuWidth - 8;
+    }
+    if (left < 8) left = 8;
+    menu.style.left = left + 'px';
+    menu.style.top = (r.bottom + 4) + 'px';
+    menu.style.maxHeight = Math.max(160, window.innerHeight - r.bottom - 16) + 'px';
+
+    setTimeout(() => {
+      document.addEventListener('click', onDocClickForSwitcher, true);
+      document.addEventListener('keydown', onKeyDownForSwitcher, true);
+      window.addEventListener('scroll', closeWatchlistSwitcherMenu, true);
+      window.addEventListener('resize', closeWatchlistSwitcherMenu);
+    }, 0);
+  });
+}
+
+if (watchlistDropdownTrigger) {
+  watchlistDropdownTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showWatchlistSwitcherMenu();
+  });
+  watchlistDropdownTrigger.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      showWatchlistSwitcherMenu();
+    }
+  });
+}
+
 // ----------------- IMPORT MENU (CSV / Chartink) -----------------
 // target 'new'     → create/overwrite a watchlist named after the source (watchlist list view)
 // target 'current' → fill the currently open watchlist (stocks view)
@@ -890,6 +1052,7 @@ function onDocClickForImportMenu(e) {
 }
 
 function showImportMenu(anchorBtn, target) {
+  closeWatchlistSwitcherMenu();
   if (importMenuEl) { closeImportMenu(); return; }
   const menu = document.createElement('div');
   menu.className = 'import-menu';
@@ -1229,6 +1392,7 @@ function onDocClickForWatchlistMenu(e) {
 }
 
 function showWatchlistMenu(anchorBtn, index, wl) {
+  closeWatchlistSwitcherMenu();
   if (watchlistMenuEl && watchlistMenuAnchor === anchorBtn) {
     closeWatchlistMenu();
     return;
@@ -1398,6 +1562,7 @@ async function deleteWatchlistByIndex(index) {
 
 backBtn.onclick = () => {
   closeWatchlistMenu();
+  closeWatchlistSwitcherMenu();
   stocksView.style.display = "none"; watchlistView.style.display = "flex";
   currentWatchlistIndex = null; allStocks = [];
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
