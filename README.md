@@ -20,8 +20,8 @@ symbol's chart on TradingView with one click. Works with TradingView's free plan
 - **Search & Sort**: Filter symbols as you type, or sort a watchlist alphabetically (A–Z).
 - **Drag & Drop**: Reorder watchlists and stocks with drag-and-drop.
 - **Keyboard Shortcuts**:
-  - `Space` or `↓` (Down Arrow): Next stock (opens chart)
-  - `Shift+Space` or `↑` (Up Arrow): Previous stock (opens chart)
+  - `↓` (Down Arrow): Next stock (opens chart)
+  - `↑` (Up Arrow): Previous stock (opens chart)
   - `→` (Right Arrow): Next watchlist (chart remains unchanged)
   - `←` (Left Arrow): Previous watchlist (chart remains unchanged)
   - `Enter`: Open highlighted stock on TradingView chart
@@ -44,7 +44,7 @@ symbol's chart on TradingView with one click. Works with TradingView's free plan
 3.  **Switch Watchlists**: Use the header title dropdown to switch lists directly without backtracking, or press `→` / `←`.
 4.  **Add Stocks**: Use the CSV import button, the floating "Add to Watchlist" button on any TradingView page, or import a [Chartink](https://chartink.com) screener (see below).
 5.  **Import from Chartink**: Open a Chartink screener and click the "Import to Watchlist" button on the page, or click "Import from Chartink" in the side panel and paste the screener URL. All matching stocks are imported into a watchlist named after the screener. Click the **↺ Re-Sync** button anytime to refresh daily results.
-6.  **View Charts**: Click any symbol or press `Space` / `↓` to cycle charts. Press `Enter` to open the highlighted stock.
+6.  **View Charts**: Click any symbol or press `↓` / `↑` to cycle charts. Press `Enter` to open the highlighted stock.
 
 ## Permissions
 
