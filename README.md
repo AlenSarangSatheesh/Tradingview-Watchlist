@@ -16,9 +16,17 @@ symbol's chart on TradingView with one click. Works with TradingView's free plan
 - **Add from TradingView**: A floating "Add to Watchlist" button on TradingView pages lets you add the current symbol to any of your watchlists.
 - **CSV Import**: Bulk-add symbols to a watchlist from a CSV file.
 - **Chartink Import**: Import every stock from a [Chartink](https://chartink.com) screener into a watchlist named after that screener. Use the "Import to Watchlist" button on the screener page, or the "Import from Chartink" button in the side panel (paste the screener URL). Re-importing the same screener overwrites that watchlist's contents.
+- **Quick Watchlist Switcher**: Jump directly between watchlists via the header dropdown without navigating back to the overview.
 - **Search & Sort**: Filter symbols as you type, or sort a watchlist alphabetically (A–Z).
-- **Drag & Drop**: Reorder watchlists with drag-and-drop.
-- **Keyboard Shortcut**: Press `Space` to cycle to the next symbol in the active watchlist.
+- **Drag & Drop**: Reorder watchlists and stocks with drag-and-drop.
+- **Keyboard Shortcuts**:
+  - `Space` or `↓` (Down Arrow): Next stock (opens chart)
+  - `Shift+Space` or `↑` (Up Arrow): Previous stock (opens chart)
+  - `→` (Right Arrow): Next watchlist (chart remains unchanged)
+  - `←` (Left Arrow): Previous watchlist (chart remains unchanged)
+  - `Enter`: Open highlighted stock on TradingView chart
+  - `Alt+W`: Toggle side panel open/closed
+- **Tutorial & Video Guide**: [Watch the Video Tutorial](https://www.youtube.com/watch?v=ihZVp78aBSA) or read the [Editorial Tutorial](https://alensarangsatheesh.github.io/Tradingview-Watchlist/tutorial.html).
 - **Side Panel Interface**: Conveniently accessible from the browser side panel.
 
 ## Installation
@@ -31,11 +39,12 @@ symbol's chart on TradingView with one click. Works with TradingView's free plan
 
 ## Usage
 
-1.  Open the extension from the Chrome side panel.
+1.  Open the extension from the Chrome side panel or TradingView chart icon (top right toolbar).
 2.  **Create Watchlist**: Click the "New" button to create a watchlist.
-3.  **Add Stocks**: Use the CSV import button, the floating "Add to Watchlist" button on any TradingView page, or import a [Chartink](https://chartink.com) screener (see below).
-4.  **Import from Chartink**: Open a Chartink screener and click the "Import to Watchlist" button on the page, or click "Import from Chartink" in the side panel and paste the screener URL. All matching stocks are imported into a watchlist named after the screener.
-5.  **View Charts**: Click any symbol to open its chart on TradingView. Press `Space` to move to the next symbol.
+3.  **Switch Watchlists**: Use the header title dropdown to switch lists directly without backtracking, or press `→` / `←`.
+4.  **Add Stocks**: Use the CSV import button, the floating "Add to Watchlist" button on any TradingView page, or import a [Chartink](https://chartink.com) screener (see below).
+5.  **Import from Chartink**: Open a Chartink screener and click the "Import to Watchlist" button on the page, or click "Import from Chartink" in the side panel and paste the screener URL. All matching stocks are imported into a watchlist named after the screener. Click the **↺ Re-Sync** button anytime to refresh daily results.
+6.  **View Charts**: Click any symbol or press `Space` / `↓` to cycle charts. Press `Enter` to open the highlighted stock.
 
 ## Permissions
 

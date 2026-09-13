@@ -901,23 +901,23 @@
         <div class="video-header">
           <div class="video-title-area">
             <h3>Complete Video Walkthrough</h3>
-            <p>A quick two-minute screening demonstrating all features in action.</p>
+            <p>A quick 1-minute walkthrough demonstrating features in action.</p>
           </div>
-          <a class="btn btn-secondary btn-sm" id="watchYtHeaderBtn" href="https://youtu.be/l0Yg0iohA30" target="_blank" rel="noopener noreferrer">
+          <a class="btn btn-secondary btn-sm" id="watchYtHeaderBtn" href="https://www.youtube.com/watch?v=ihZVp78aBSA" target="_blank" rel="noopener noreferrer">
             <span>Watch on YouTube</span>
             <span aria-hidden="true">&nearr;</span>
           </a>
         </div>
 
         <div class="stage">
-          <a class="player" id="player" href="https://youtu.be/l0Yg0iohA30" target="_blank" rel="noopener noreferrer" role="button" aria-label="Watch video tutorial on YouTube">
+          <a class="player" id="player" href="https://www.youtube.com/watch?v=ihZVp78aBSA" target="_blank" rel="noopener noreferrer" role="button" aria-label="Watch video tutorial on YouTube">
             <img class="thumb" id="thumb" src="media/tutorial-poster.jpg" alt="Video Tutorial Thumbnail">
             <span class="scrim">
               <span class="play-btn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
               </span>
               <span class="plabel">
-                <span>Play Demo Video &bull; 1:58</span>
+                <span>Play Video &bull; 1:03</span>
                 <span aria-hidden="true">&nearr;</span>
               </span>
             </span>
@@ -925,12 +925,12 @@
         </div>
 
         <div class="video-chapters">
-          <span class="video-chapters-label">Chapters:</span>
-          <a class="chapter-tag" href="#tutorial-access"><span>0:00</span> Access &amp; Pinning</a>
-          <a class="chapter-tag" href="#tutorial-watchlists"><span>0:35</span> Creating Lists</a>
-          <a class="chapter-tag" href="#tutorial-import"><span>0:58</span> Chartink Screener</a>
-          <a class="chapter-tag" href="#tutorial-shortcuts"><span>1:25</span> Fast Scanning</a>
-          <a class="chapter-tag" href="#tutorial-settings"><span>1:45</span> Settings &amp; Backup</a>
+          <span class="video-chapters-label">Quick Jump:</span>
+          <a class="chapter-tag" href="#tutorial-access"><span>01</span> Access &amp; Pinning</a>
+          <a class="chapter-tag" href="#tutorial-watchlists"><span>02</span> Creating Lists</a>
+          <a class="chapter-tag" href="#tutorial-import"><span>03</span> Chartink Screener</a>
+          <a class="chapter-tag" href="#tutorial-shortcuts"><span>04</span> Fast Scanning</a>
+          <a class="chapter-tag" href="#tutorial-settings"><span>05</span> Settings &amp; Backup</a>
         </div>
       </div>
     </section>
@@ -1255,6 +1255,53 @@
       </div>
     </div>
 
+    <!-- Card 2C: Quick Watchlist Switcher Dropdown -->
+    <div class="tutorial-card">
+      <div class="tutorial-card-header">
+        <div class="badge-number">2C</div>
+        <div class="tutorial-card-title">
+          <h3>Quick Switcher Dropdown (Zero Backtracking)</h3>
+          <p>Jump directly between watchlists with one click without returning to the main overview.</p>
+        </div>
+      </div>
+
+      <div class="step-grid reverse">
+        <div class="shot-box" data-lightbox="media/tutorial/watchlist-quick-switcher-dropdown.png" data-caption="Quick Watchlist Switcher: Click the title dropdown chevron to search and jump to any watchlist without going back">
+          <img src="media/tutorial/watchlist-quick-switcher-dropdown.png" alt="Quick Watchlist dropdown switcher menu without going back">
+          <div class="shot-caption">
+            <span>Watchlist Switcher Dropdown (No Backtracking)</span>
+            <span class="zoom-hint">&bull; Expand</span>
+          </div>
+        </div>
+
+        <div class="step-instructions">
+          <div class="step-item">
+            <div class="step-bullet">&#9662;</div>
+            <div class="step-text">
+              <h4>Click the Watchlist Title Dropdown</h4>
+              <p>While viewing stocks in any watchlist, simply click the watchlist title at the top header (next to the dropdown chevron). A searchable popout list appears showing all your watchlists with real-time stock counts.</p>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-bullet">&#128269;</div>
+            <div class="step-text">
+              <h4>Instant Search &amp; 1-Click Jump</h4>
+              <p>Type to filter through your watchlists instantly, or click any watchlist to switch immediately. There is zero need to click the back button or navigate away from your charting flow.</p>
+            </div>
+          </div>
+
+          <div class="step-item">
+            <div class="step-bullet">&#8644;</div>
+            <div class="step-text">
+              <h4>Or Use Arrow Key Shortcuts</h4>
+              <p>Prefer the keyboard? Press <strong><kbd>&rarr; Right Arrow</kbd></strong> for next watchlist or <strong><kbd>&larr; Left Arrow</kbd></strong> for previous watchlist—your active TradingView chart remains uninterrupted!</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ================================================================= -->
     <!-- TUTORIAL 3: ADDING STOCKS & CHARTINK IMPORT                       -->
     <!-- ================================================================= -->
@@ -1411,7 +1458,7 @@
         <span>Speed</span>
       </div>
       <div class="section-header-content">
-        <h2>Lightning-Fast Charting &amp; Spacebar Navigation</h2>
+        <h2>Lightning-Fast Charting &amp; Keyboard Shortcuts</h2>
         <p>Speed through 50+ charts per minute with zero lag and native keyboard shortcuts.</p>
       </div>
     </div>
@@ -1440,8 +1487,16 @@
           <div class="step-item" style="border-left: 2px solid var(--brass); padding-left: 12px;">
             <div class="step-bullet" style="background:var(--brass-soft); color:var(--brass);">&starf;</div>
             <div class="step-text">
-              <h4>Press <kbd>Space</kbd> to Cycle Next Stock</h4>
-              <p>While viewing your TradingView chart, simply press the <strong><kbd>Space</kbd></strong> bar. The chart instantly switches to the next ticker in your active watchlist!</p>
+              <h4>Full Keyboard Shortcut Navigation</h4>
+              <p>While viewing your TradingView chart or browsing the sidepanel, use instant shortcuts without moving your mouse:</p>
+              <ul style="margin: 8px 0 8px 18px; line-height: 1.8; color: var(--paper-muted); font-size: 13.5px;">
+                <li><strong><kbd>Space</kbd></strong> or <strong><kbd>&darr; Down Arrow</kbd></strong>: Jump to next ticker &amp; open chart.</li>
+                <li><strong><kbd>Shift</kbd> + <kbd>Space</kbd></strong> or <strong><kbd>&uarr; Up Arrow</kbd></strong>: Jump back to previous ticker &amp; open chart.</li>
+                <li><strong><kbd>&rarr; Right Arrow</kbd></strong>: Switch to next watchlist seamlessly (chart remains untouched).</li>
+                <li><strong><kbd>&larr; Left Arrow</kbd></strong>: Switch to previous watchlist seamlessly (chart remains untouched).</li>
+                <li><strong><kbd>Enter</kbd></strong>: Open the chart for the currently highlighted stock on demand.</li>
+                <li><strong><kbd>Alt</kbd> + <kbd>W</kbd></strong>: Instantly open or close the sidepanel dock on TradingView.</li>
+              </ul>
             </div>
           </div>
 
@@ -1644,8 +1699,33 @@
         <tbody>
           <tr>
             <td><strong>Next Symbol in List</strong></td>
-            <td><kbd>Space</kbd> (on Chart)</td>
-            <td>Jumps to next symbol in active watchlist on TradingView chart</td>
+            <td><kbd>Space</kbd> or <kbd>&darr;</kbd> (Down Arrow)</td>
+            <td>Advances to next stock in active list and opens chart</td>
+          </tr>
+          <tr>
+            <td><strong>Previous Symbol in List</strong></td>
+            <td><kbd>&uarr;</kbd> (Up Arrow) or <kbd>Shift</kbd> + <kbd>Space</kbd></td>
+            <td>Moves to previous stock in active list and opens chart</td>
+          </tr>
+          <tr>
+            <td><strong>Next Watchlist</strong></td>
+            <td><kbd>&rarr;</kbd> (Right Arrow)</td>
+            <td>Cycles to next watchlist smoothly (chart remains untouched)</td>
+          </tr>
+          <tr>
+            <td><strong>Previous Watchlist</strong></td>
+            <td><kbd>&larr;</kbd> (Left Arrow)</td>
+            <td>Cycles to previous watchlist smoothly (chart remains untouched)</td>
+          </tr>
+          <tr>
+            <td><strong>Open Stock Chart</strong></td>
+            <td><kbd>Enter</kbd></td>
+            <td>Opens highlighted stock on chart, or opens selected list in overview</td>
+          </tr>
+          <tr>
+            <td><strong>Toggle Sidepanel</strong></td>
+            <td><kbd>Alt</kbd> + <kbd>W</kbd></td>
+            <td>Quickly opens or closes the watchlist side panel on TradingView charts</td>
           </tr>
           <tr>
             <td><strong>Switch Chart Symbol</strong></td>
@@ -1697,7 +1777,7 @@
         <div class="footer-links">
           <a href="https://www.tradingview.com/chart/" target="_blank" rel="noopener">TradingView</a>
           <a href="https://chartink.com" target="_blank" rel="noopener">Chartink</a>
-          <a href="https://youtu.be/l0Yg0iohA30" target="_blank" rel="noopener">Video Tutorial</a>
+          <a href="https://www.youtube.com/watch?v=ihZVp78aBSA" target="_blank" rel="noopener">Video Tutorial</a>
           <a href="mailto:alensarangsatheesh@gmail.com?subject=Feedback%20for%20Unlimited%20Watchlists">Contact</a>
         </div>
       </div>

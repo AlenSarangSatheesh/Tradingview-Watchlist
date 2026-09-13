@@ -16,8 +16,9 @@ chrome.runtime.onStartup.addListener(() => {
 });
 
 function initializeExtension() {
-  chrome.storage.local.get("watchlists", ({ watchlists }) => {
+  chrome.storage.local.get(["watchlists", "defaultExchange"], ({ watchlists, defaultExchange }) => {
     if (!watchlists) chrome.storage.local.set({ watchlists: [] });
+    if (!defaultExchange) chrome.storage.local.set({ defaultExchange: 'NSE' });
   });
 }
 
@@ -79,12 +80,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     }
     else if (request.action === "changeSymbol") {
       chrome.tabs.query({ url: ["*://*.tradingview.com/*"] }, (tabs) => {
-        const activeTvTab = tabs.find(t => t.active) || tabs.find(t => t.url && t.url.includes('/chart/')) || tabs[0];
-        if (activeTvTab) {
-          chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: request.symbol }, () => {
+        if (!tabs || tabs.length === 0) return;
+        const activeTvChartTab = tabs.find(t => t.active && t.url && t.url.includes('/chart/'));
+        const anyTvChartTab = tabs.find(t => t.url && t.url.includes('/chart/'));
+        const targetTvTab = activeTvChartTab || anyTvChartTab || tabs.find(t => t.active) || tabs[0];
+        if (targetTvTab) {
+          chrome.tabs.sendMessage(targetTvTab.id, { action: "changeSymbol", symbol: request.symbol }, () => {
             if (chrome.runtime.lastError) {
               const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(request.symbol)}`;
-              chrome.tabs.update(activeTvTab.id, { url });
+              chrome.tabs.update(targetTvTab.id, { url });
             }
           });
         }

@@ -5,7 +5,7 @@
 (function () {
   "use strict";
 
-  const YOUTUBE_URL = "https://youtu.be/l0Yg0iohA30";
+  const YOUTUBE_URL = "https://www.youtube.com/watch?v=ihZVp78aBSA";
   const TRADINGVIEW_URL = "https://www.tradingview.com/chart/";
 
   // --- SAFE TAB OPENERS ---

@@ -45,9 +45,22 @@ if (closePanelBtn) closePanelBtn.onclick = requestCloseInPagePanel;
 if (closeStocksPanelBtn) closeStocksPanelBtn.onclick = requestCloseInPagePanel;
 
 window.addEventListener("message", (e) => {
-  if (e.data && e.data.action === "triggerSelectNextStock") {
+  if (!e.data) return;
+  if (e.data.action === "triggerSelectNextStock") {
     if (stocksView && stocksView.style.display !== 'none') {
       selectNextStock();
+    }
+  } else if (e.data.action === "triggerSelectPrevStock") {
+    if (stocksView && stocksView.style.display !== 'none') {
+      selectPreviousStock();
+    }
+  } else if (e.data.action === "triggerSelectNextWatchlist") {
+    if (stocksView && stocksView.style.display !== 'none') {
+      selectNextWatchlist();
+    }
+  } else if (e.data.action === "triggerSelectPrevWatchlist") {
+    if (stocksView && stocksView.style.display !== 'none') {
+      selectPreviousWatchlist();
     }
   }
 });
@@ -82,6 +95,20 @@ let defaultExchange = 'NSE';
 // Strips any exchange prefix so "AAPL" and "NASDAQ:AAPL" are treated as the same stock.
 const canonicalSymbol = (s) => String(s).trim().toUpperCase().replace(/^[^:]+:/, '').replace(/[&_]/g, '-');
 
+function dedupeWatchlists(watchlists) {
+  (watchlists || []).forEach((wl) => {
+    if (!Array.isArray(wl.stocks)) return;
+    const seen = new Set();
+    wl.stocks = wl.stocks.filter((s) => {
+      const c = canonicalSymbol(s);
+      if (seen.has(c)) return false;
+      seen.add(c);
+      return true;
+    });
+  });
+  return watchlists;
+}
+
 // Display-only: drops the leading EXCHANGE: prefix so the watchlist shows just the ticker
 // (e.g. "BATS:AAPL" -> "AAPL", "TSX-DLY:SHOP" -> "SHOP"). The full symbol is still stored and
 // used for opening charts. Strips everything up to the first colon so hyphenated exchange
@@ -93,6 +120,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "triggerSelectNextStock") {
     if (stocksView.style.display !== 'none') {
       selectNextStock();
+    }
+  } else if (request.action === "triggerSelectPrevStock") {
+    if (stocksView.style.display !== 'none') {
+      selectPreviousStock();
+    }
+  } else if (request.action === "triggerSelectNextWatchlist") {
+    if (stocksView && stocksView.style.display !== 'none') {
+      selectNextWatchlist();
+    }
+  } else if (request.action === "triggerSelectPrevWatchlist") {
+    if (stocksView && stocksView.style.display !== 'none') {
+      selectPreviousWatchlist();
     }
   } else if (request.action === "refreshWatchlistUI") {
     // --- LOCK HEIGHT TO PREVENT SCROLL JUMP ---
@@ -135,9 +174,55 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
 // ----------------- KEYBOARD SHORTCUTS -----------------
 document.addEventListener('keydown', (e) => {
-  if (stocksView.style.display === 'none') return;
-  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
-  if (e.code === 'Space') { e.preventDefault(); selectNextStock(); }
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON' || e.target.closest('button') || e.target.isContentEditable) return;
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  if (switcherMenuEl || 
+      (settingsModal && settingsModal.style.display === 'flex') || 
+      document.querySelector('.ui-modal') || 
+      (ctxMenu && ctxMenu.classList.contains('show')) || 
+      importMenuEl) return;
+
+  // 1. INSIDE STOCKS VIEW (Viewing a specific watchlist's stocks)
+  if (stocksView && stocksView.style.display !== 'none') {
+    if ((!e.shiftKey && e.code === 'Space') || e.code === 'ArrowDown') {
+      e.preventDefault();
+      selectNextStock();
+    } else if ((e.shiftKey && e.code === 'Space') || e.code === 'ArrowUp') {
+      e.preventDefault();
+      selectPreviousStock();
+    } else if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      selectNextWatchlist();
+    } else if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      selectPreviousWatchlist();
+    } else if (e.code === 'Enter') {
+      const activeItem = stocksContainer.querySelector('li.active');
+      if (activeItem) {
+        const stockName = activeItem.querySelector('.stock-name');
+        if (stockName) {
+          e.preventDefault();
+          const symbol = stockName.dataset.symbol || stockName.textContent.trim();
+          openTradingView(symbol);
+        }
+      }
+    }
+  }
+  // 2. INSIDE WATCHLISTS OVERVIEW VIEW (The list of all watchlists)
+  else if (watchlistView && watchlistView.style.display !== 'none') {
+    if (e.code === 'ArrowDown' || e.code === 'ArrowRight') {
+      e.preventDefault();
+      selectNextWatchlistInOverview();
+    } else if (e.code === 'ArrowUp' || e.code === 'ArrowLeft') {
+      e.preventDefault();
+      selectPreviousWatchlistInOverview();
+    } else if (e.code === 'Enter') {
+      if (selectedIndex !== null && selectedIndex !== undefined) {
+        e.preventDefault();
+        openStocksView(selectedIndex);
+      }
+    }
+  }
 });
 
 function selectNextStock() {
@@ -156,6 +241,109 @@ function selectNextStock() {
       nextItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }
+}
+
+function selectPreviousStock() {
+  const visibleItems = Array.from(stocksContainer.querySelectorAll('li:not(.empty-message):not(.search-empty-message):not(.hidden)'));
+  if (visibleItems.length === 0) return;
+  const activeIndex = visibleItems.findIndex(item => item.classList.contains('active'));
+  let prevIndex = visibleItems.length - 1;
+  if (activeIndex !== -1) {
+    prevIndex = (activeIndex - 1 + visibleItems.length) % visibleItems.length;
+  }
+  const prevItem = visibleItems[prevIndex];
+  if (prevItem) {
+    const stockName = prevItem.querySelector('.stock-name');
+    if (stockName) {
+      const symbol = stockName.dataset.symbol || stockName.textContent.trim();
+      setActiveStock(symbol);
+      openTradingView(symbol);
+      prevItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }
+}
+
+function selectNextWatchlist() {
+  chrome.storage.local.get(["watchlists", "lastSelectedWatchlistIndex"], (res) => {
+    const watchlists = res.watchlists || [];
+    if (!watchlists || watchlists.length === 0) return;
+    let baseIdx = currentWatchlistIndex;
+    if (baseIdx === null || baseIdx === undefined || isNaN(baseIdx)) {
+      baseIdx = (typeof res.lastSelectedWatchlistIndex === 'number') ? res.lastSelectedWatchlistIndex : (selectedIndex !== null ? selectedIndex : 0);
+    }
+    const nextIndex = (baseIdx + 1) % watchlists.length;
+    switchToWatchlistByIndex(nextIndex, watchlists);
+  });
+}
+
+function selectPreviousWatchlist() {
+  chrome.storage.local.get(["watchlists", "lastSelectedWatchlistIndex"], (res) => {
+    const watchlists = res.watchlists || [];
+    if (!watchlists || watchlists.length === 0) return;
+    let baseIdx = currentWatchlistIndex;
+    if (baseIdx === null || baseIdx === undefined || isNaN(baseIdx)) {
+      baseIdx = (typeof res.lastSelectedWatchlistIndex === 'number') ? res.lastSelectedWatchlistIndex : (selectedIndex !== null ? selectedIndex : 0);
+    }
+    const prevIndex = (baseIdx - 1 + watchlists.length) % watchlists.length;
+    switchToWatchlistByIndex(prevIndex, watchlists);
+  });
+}
+
+function selectNextWatchlistInOverview() {
+  chrome.storage.local.get("watchlists", ({ watchlists = [] }) => {
+    if (!watchlists || watchlists.length === 0) return;
+    let nextIdx = 0;
+    if (typeof selectedIndex === 'number' && selectedIndex >= 0) {
+      nextIdx = (selectedIndex + 1) % watchlists.length;
+    }
+    selectedIndex = nextIdx;
+    saveLastSelectedWatchlist(nextIdx);
+    const items = container.querySelectorAll('li:not(.empty-state)');
+    if (items.length === watchlists.length) {
+      items.forEach((li, i) => li.classList.toggle('selected', i === nextIdx));
+      updateActionButtons();
+      scrollToSelected();
+    } else {
+      renderWatchlists(watchlists);
+      setTimeout(scrollToSelected, 30);
+    }
+  });
+}
+
+function selectPreviousWatchlistInOverview() {
+  chrome.storage.local.get("watchlists", ({ watchlists = [] }) => {
+    if (!watchlists || watchlists.length === 0) return;
+    let prevIdx = watchlists.length - 1;
+    if (typeof selectedIndex === 'number' && selectedIndex >= 0) {
+      prevIdx = (selectedIndex - 1 + watchlists.length) % watchlists.length;
+    }
+    selectedIndex = prevIdx;
+    saveLastSelectedWatchlist(prevIdx);
+    const items = container.querySelectorAll('li:not(.empty-state)');
+    if (items.length === watchlists.length) {
+      items.forEach((li, i) => li.classList.toggle('selected', i === prevIdx));
+      updateActionButtons();
+      scrollToSelected();
+    } else {
+      renderWatchlists(watchlists);
+      setTimeout(scrollToSelected, 30);
+    }
+  });
+}
+
+function switchToWatchlistByIndex(index, watchlists) {
+  const targetWl = watchlists[index];
+  if (!targetWl) return;
+
+  const targetStock = targetWl.lastSelected || (targetWl.stocks && targetWl.stocks[0]);
+  if (targetStock && !targetWl.lastSelected) {
+    targetWl.lastSelected = targetStock;
+    chrome.storage.local.set({ watchlists });
+  }
+
+  selectedIndex = index;
+  saveLastSelectedWatchlist(index);
+  openStocksView(index);
 }
 
 // ----------------- DRAG AND DROP -----------------
@@ -265,9 +453,13 @@ function updateSearchPlaceholder(count) {
   }
 }
 
+let searchListenersInitialized = false;
 function initializeSearch() {
-  stockSearchInput.addEventListener('input', handleSearchInput);
-  clearSearchBtn.addEventListener('click', clearSearch);
+  if (!searchListenersInitialized) {
+    stockSearchInput.addEventListener('input', handleSearchInput);
+    clearSearchBtn.addEventListener('click', clearSearch);
+    searchListenersInitialized = true;
+  }
   stockSearchInput.value = ''; clearSearchBtn.style.display = 'none';
 }
 
@@ -283,7 +475,7 @@ function clearSearch() {
 
 function filterStocks(term) {
   let visible = false;
-  stocksContainer.querySelectorAll('li:not(.empty-message)').forEach(item => {
+  stocksContainer.querySelectorAll('li:not(.empty-message):not(.search-empty-message)').forEach(item => {
     const nameEl = item.querySelector('.stock-name');
     // Match against the full symbol (with exchange) so "aapl" and "bats" both find BATS:AAPL.
     const name = (nameEl?.dataset.symbol || nameEl?.textContent || '').toLowerCase();
@@ -295,10 +487,11 @@ function filterStocks(term) {
   if (!visible && term !== '') {
     if (!msg) {
       msg = document.createElement('li'); msg.className = 'search-empty-message';
-      msg.textContent = `No stocks found matching "${stockSearchInput.value}"`;
       msg.style.textAlign = 'center'; msg.style.color = '#888'; msg.style.padding = '20px';
       stocksContainer.appendChild(msg);
     }
+    msg.textContent = `No stocks found matching "${stockSearchInput.value}"`;
+    msg.classList.remove('hidden');
   } else if (msg) msg.remove();
 }
 
@@ -330,12 +523,18 @@ function showToast(message, duration = 2000) {
 
 // ----------------- SORT -----------------
 function sortStocksAlphabetically() {
-  if (currentWatchlistIndex === null) return;
+  if (currentWatchlistIndex === null || currentWatchlistIndex === undefined) return;
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
+    if (!watchlists || !watchlists[currentWatchlistIndex]) return;
     const wl = watchlists[currentWatchlistIndex];
-    if (!wl || !wl.stocks.length) return;
+    if (!wl || !wl.stocks || !wl.stocks.length) return;
 
-    wl.stocks.sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    wl.stocks.sort((a, b) => {
+      const dispA = displaySymbol(a);
+      const dispB = displaySymbol(b);
+      const cmp = dispA.localeCompare(dispB, undefined, { sensitivity: 'base' });
+      return cmp !== 0 ? cmp : a.localeCompare(b, undefined, { sensitivity: 'base' });
+    });
     allStocks = [...wl.stocks];
 
     chrome.storage.local.set({ watchlists }, async () => {
@@ -459,25 +658,44 @@ function openStocksView(index) {
     if (needsResolution) {
       watchlistTitle.textContent = wl.name + ' (Resolving BSE...)';
       Promise.all(resolvePromises).then(results => {
-        let updated = false;
-        results.forEach(res => {
-          if (res && res.tvSymbol !== res.old) {
-            wl.stocks[res.i] = res.tvSymbol;
-            if (wl.lastSelected === res.old) wl.lastSelected = res.tvSymbol;
-            updated = true;
-          }
-        });
-        if (updated) {
-          chrome.storage.local.set({ watchlists }, () => {
-            if (currentWatchlistIndex === index) {
-              watchlistTitle.textContent = wl.name;
-              allStocks = [...wl.stocks];
-              renderStocks(wl.stocks, wl.lastSelected);
+        chrome.storage.local.get("watchlists", ({ watchlists: freshWatchlists }) => {
+          if (!freshWatchlists) return;
+          const freshWl = freshWatchlists[index];
+          if (!freshWl) return;
+
+          let updated = false;
+          results.forEach(res => {
+            if (res && res.tvSymbol !== res.old) {
+              const currentPos = (freshWl.stocks || []).indexOf(res.old);
+              const targetPos = currentPos !== -1 ? currentPos : res.i;
+              if (freshWl.stocks && freshWl.stocks[targetPos] === res.old) {
+                freshWl.stocks[targetPos] = res.tvSymbol;
+              } else if (currentPos !== -1) {
+                freshWl.stocks[currentPos] = res.tvSymbol;
+              }
+              if (freshWl.lastSelected === res.old) freshWl.lastSelected = res.tvSymbol;
+
+              // Migrate any notes/color tags from old scrip code to resolved symbol
+              if (freshWl.stockNotes && freshWl.stockNotes[res.old]) {
+                freshWl.stockNotes[res.tvSymbol] = freshWl.stockNotes[res.old];
+                delete freshWl.stockNotes[res.old];
+              }
+              updated = true;
             }
           });
-        } else {
-          if (currentWatchlistIndex === index) watchlistTitle.textContent = wl.name;
-        }
+
+          if (updated) {
+            chrome.storage.local.set({ watchlists: freshWatchlists }, () => {
+              if (currentWatchlistIndex === index) {
+                watchlistTitle.textContent = freshWl.name;
+                allStocks = [...(freshWl.stocks || [])];
+                renderStocks(freshWl.stocks, freshWl.lastSelected);
+              }
+            });
+          } else {
+            if (currentWatchlistIndex === index) watchlistTitle.textContent = freshWl.name;
+          }
+        });
       });
     }
 
@@ -695,8 +913,10 @@ const uiPrompt = (title, defaultValue = '', placeholder = '') => uiDialog({ titl
 const uiConfirm = (title, opts = {}) => uiDialog({ title, okText: opts.okText || 'OK', cancelText: opts.cancelText || 'Cancel', danger: !!opts.danger });
 
 async function clearAllStocks() {
+  if (currentWatchlistIndex === null || currentWatchlistIndex === undefined) return;
   if (!(await uiConfirm('Clear all stocks in this watchlist?', { okText: 'Clear all', danger: true }))) return;
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
+    if (!watchlists || !watchlists[currentWatchlistIndex]) return;
     watchlists[currentWatchlistIndex].stocks = [];
     watchlists[currentWatchlistIndex].stockNotes = {};
     watchlists[currentWatchlistIndex].lastSelected = null;
@@ -708,7 +928,9 @@ async function clearAllStocks() {
 }
 
 function setActiveStock(stock) {
+  if (currentWatchlistIndex === null || currentWatchlistIndex === undefined) return;
   chrome.storage.local.get("watchlists", ({ watchlists }) => {
+    if (!watchlists || !watchlists[currentWatchlistIndex]) return;
     watchlists[currentWatchlistIndex].lastSelected = stock;
     chrome.storage.local.set({ watchlists }, () => {
       stocksContainer.querySelectorAll('li').forEach(item => {
@@ -942,31 +1164,37 @@ async function openTradingView(stock) {
   // If chrome.tabs is available (e.g. Chrome sidepanel, popout window)
   if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.query) {
     chrome.tabs.query({ url: ["*://*.tradingview.com/*"] }, (tabs) => {
-      const activeTvTab = tabs.find(t => t.active) || tabs.find(t => t.url && t.url.includes('/chart/')) || tabs[0];
-      if (activeTvTab) {
-        if (!activeTvTab.url || !activeTvTab.url.includes('/chart/')) {
+      if (!tabs || tabs.length === 0) {
+        createTradingViewTabWithSymbol(tvSymbol);
+        return;
+      }
+      const activeTvChartTab = tabs.find(t => t.active && t.url && t.url.includes('/chart/'));
+      const anyTvChartTab = tabs.find(t => t.url && t.url.includes('/chart/'));
+      const targetTvTab = activeTvChartTab || anyTvChartTab || tabs.find(t => t.active) || tabs[0];
+      if (targetTvTab) {
+        if (!targetTvTab.url || !targetTvTab.url.includes('/chart/')) {
           const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
-          chrome.tabs.update(activeTvTab.id, { url, active: true }, () => {
-            if (activeTvTab.windowId) {
-              chrome.windows.update(activeTvTab.windowId, { focused: true });
+          chrome.tabs.update(targetTvTab.id, { url, active: true }, () => {
+            if (targetTvTab.windowId) {
+              chrome.windows.update(targetTvTab.windowId, { focused: true });
             }
           });
-          tradingviewTabId = activeTvTab.id;
+          tradingviewTabId = targetTvTab.id;
           return;
         }
 
         const sendMessage = () => {
-          chrome.tabs.sendMessage(activeTvTab.id, { action: "changeSymbol", symbol: tvSymbol }, (response) => {
+          chrome.tabs.sendMessage(targetTvTab.id, { action: "changeSymbol", symbol: tvSymbol }, (response) => {
             if (chrome.runtime.lastError) {
               const url = `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tvSymbol)}`;
-              chrome.tabs.update(activeTvTab.id, { url });
+              chrome.tabs.update(targetTvTab.id, { url });
             }
           });
         };
         
-        activateTab(activeTvTab);
+        activateTab(targetTvTab);
         sendMessage();
-        tradingviewTabId = activeTvTab.id;
+        tradingviewTabId = targetTvTab.id;
       } else { createTradingViewTabWithSymbol(tvSymbol); }
     });
   } else if (typeof chrome !== 'undefined' && chrome.runtime?.sendMessage) {
@@ -1485,7 +1713,7 @@ chrome.storage.local.get('theme', ({ theme }) => applyTheme(theme === 'light' ? 
 
 // ----------------- DEFAULT MARKET -----------------
 chrome.storage.local.get('defaultExchange', ({ defaultExchange: stored }) => {
-  if (stored) defaultExchange = stored;
+  defaultExchange = stored || 'NSE';
   if (defaultMarketSelect) defaultMarketSelect.value = defaultExchange;
 });
 if (defaultMarketSelect) {
@@ -1558,7 +1786,7 @@ function showWatchlistMenu(anchorBtn, index, wl) {
         <span>Export</span>
       </div>
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.6; margin-left: 6px;">
-        <polyline points="15 18 9 12 15 6"></polyline>
+        <polyline points="9 18 15 12 9 6"></polyline>
       </svg>
       <div class="watchlist-submenu">
         <div class="watchlist-menu-item" data-act="export-csv">
@@ -1719,8 +1947,10 @@ csvInput.onchange = (e) => {
     csvInput.value = "";
     if (!symbols.length) { showToast('No symbols found in the file'); return; }
     chrome.storage.local.get("watchlists", ({ watchlists }) => {
-      if (!watchlists[currentWatchlistIndex]) return;
-      watchlists[currentWatchlistIndex].stocks = symbols; allStocks = [...symbols];
+      if (!watchlists || !watchlists[currentWatchlistIndex]) return;
+      watchlists[currentWatchlistIndex].stocks = symbols;
+      watchlists[currentWatchlistIndex].lastSelected = symbols[0] || null;
+      allStocks = [...symbols];
       chrome.storage.local.set({ watchlists }, () => {
         openStocksView(currentWatchlistIndex);
         showToast(`${symbols.length} stocks imported`);
@@ -1762,18 +1992,46 @@ if (restoreDataBtn && restoreFileInput) {
     if (!file) return;
     
     const reader = new FileReader();
-    reader.onload = (ev) => {
+    reader.onload = async (ev) => {
       try {
-        const parsedData = JSON.parse(ev.target.result);
-        if (typeof parsedData !== 'object' || parsedData === null) throw new Error("Invalid backup format");
-        
-        // Wipe and replace strategy
-        chrome.storage.local.clear(() => {
-          chrome.storage.local.set(parsedData, () => {
-            showToast("Restore complete! Reloading...", 3000);
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
+        let parsedData = JSON.parse(ev.target.result);
+        if (!parsedData || typeof parsedData !== 'object') throw new Error("File content is not valid JSON");
+
+        // If user imported a raw array of watchlists, normalize to standard format
+        if (Array.isArray(parsedData)) {
+          parsedData = { watchlists: parsedData };
+        }
+
+        if (!Array.isArray(parsedData.watchlists)) {
+          throw new Error("Backup file is missing a valid 'watchlists' array");
+        }
+
+        // Prompt user confirmation before wiping
+        const confirmed = await uiConfirm("Restoring backup will replace all current watchlists. Continue?", { okText: "Restore & Replace", danger: true });
+        if (!confirmed) {
+          restoreFileInput.value = "";
+          return;
+        }
+
+        // Clean duplicates
+        parsedData.watchlists = dedupeWatchlists(parsedData.watchlists);
+
+        // Keep memory backup of current data in case set fails
+        chrome.storage.local.get(null, (currentBackup) => {
+          chrome.storage.local.clear(() => {
+            chrome.storage.local.set(parsedData, () => {
+              if (chrome.runtime.lastError) {
+                // Rollback
+                chrome.storage.local.set(currentBackup || {}, () => {
+                  showToast("Restore failed: " + chrome.runtime.lastError.message, 4000);
+                });
+                return;
+              }
+              showToast("Restore complete! Reloading...", 3000);
+              setTimeout(() => {
+                window.location.reload();
+              }, 1000);
+            });
           });
         });
       } catch (err) {

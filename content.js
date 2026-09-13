@@ -61,15 +61,38 @@
 
   // --- GLOBAL KEYBOARD SHORTCUTS ---
   document.addEventListener('keydown', (e) => {
+    // 0. Only intercept shortcuts when the in-page sidepanel is open and visible
+    if (!isPanelOpen) return;
+
     // 1. Ignore if user is typing in a text box
     const tag = e.target.tagName.toLowerCase();
     if (tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
 
-    // 2. Intercept Space Key (only on chart pages)
-    if (e.code === 'Space' && window.location.pathname.includes('/chart/')) {
-      // Stop TradingView's default behavior (which cycles their own watchlist)
+    // 2. Ignore if modifier keys (Ctrl, Alt, Meta) are held down
+    if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+    // 3. Only intercept on chart pages
+    if (!window.location.pathname.includes('/chart/')) return;
+
+    // Next Stock: Space (without Shift) OR ArrowDown
+    const isNext = (!e.shiftKey && e.code === 'Space') || e.code === 'ArrowDown';
+    // Previous Stock: Shift + Space OR ArrowUp
+    const isPrev = (e.shiftKey && e.code === 'Space') || e.code === 'ArrowUp';
+    // Next Watchlist: ArrowRight
+    const isNextWl = e.code === 'ArrowRight';
+    // Previous Watchlist: ArrowLeft
+    const isPrevWl = e.code === 'ArrowLeft';
+
+    if (isNext || isPrev || isNextWl || isPrevWl) {
+      // Stop TradingView's default behavior
       e.preventDefault();
       e.stopPropagation();
+
+      let action = "";
+      if (isNext) action = "triggerSelectNextStock";
+      else if (isPrev) action = "triggerSelectPrevStock";
+      else if (isNextWl) action = "triggerSelectNextWatchlist";
+      else if (isPrevWl) action = "triggerSelectPrevWatchlist";
 
       // Forward to the sidepanel via ONE path only.  When the in-page iframe
       // exists, use postMessage (instant, same event-loop).  Fall back to
@@ -79,9 +102,9 @@
       // whenever the first call's async DOM update completed before the
       // second call read the DOM.
       if (sidepanelIframe && sidepanelIframe.contentWindow) {
-        sidepanelIframe.contentWindow.postMessage({ action: "triggerSelectNextStock" }, "*");
+        sidepanelIframe.contentWindow.postMessage({ action }, "*");
       } else if (chrome.runtime?.id) {
-        chrome.runtime.sendMessage({ action: "triggerSelectNextStock" }).catch(() => {
+        chrome.runtime.sendMessage({ action }).catch(() => {
           // Ignore error if side panel is closed
         });
       }
@@ -482,6 +505,7 @@
     }
   }
 
+  let resizerListenersAdded = false;
   function setupResizerEvents() {
     if (!sidepanelResizer) return;
     let startX = 0;
@@ -499,6 +523,9 @@
       document.body.style.cursor = 'col-resize';
       document.body.style.userSelect = 'none';
     };
+
+    if (resizerListenersAdded) return;
+    resizerListenersAdded = true;
 
     document.addEventListener('mousemove', (e) => {
       if (!isResizing) return;

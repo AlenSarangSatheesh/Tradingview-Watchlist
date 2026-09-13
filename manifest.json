@@ -10,7 +10,9 @@
     "https://in.tradingview.com/*",
     "https://*.tradingview.com/*",
     "https://chartink.com/*",
-    "https://www.chartink.com/*"
+    "https://www.chartink.com/*",
+    "https://www.screener.in/*",
+    "https://screener.in/*"
   ],
   "icons": {
     "16": "icons/icon16.png",

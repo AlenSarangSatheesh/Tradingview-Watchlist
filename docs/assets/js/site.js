@@ -107,4 +107,32 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
+  // Video Player interactive handler
+  // (Safely opens YouTube in new tab on file:// to avoid YouTube Error 153, and seamlessly embeds on web protocols)
+  const videoPlayer = document.getElementById('player');
+  const videoStage = document.getElementById('videoStage');
+  if (videoPlayer && videoStage) {
+    videoPlayer.addEventListener('click', (e) => {
+      const isFileProtocol = window.location.protocol === 'file:';
+      if (isFileProtocol) {
+        // Local file protocol: YouTube blocks iframe embeds with Error 153.
+        // Let the default link behavior with target="_blank" cleanly open YouTube.
+        return;
+      }
+
+      // On http/https web servers: embed and autoplay smoothly
+      e.preventDefault();
+      videoStage.innerHTML = `
+        <div class="video-embed-wrap" style="margin-bottom: 0;">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/ihZVp78aBSA?autoplay=1&rel=0&modestbranding=1"
+            title="Unlimited Watchlists for TradingView Tutorial Video"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        </div>
+      `;
+    });
+  }
 });
