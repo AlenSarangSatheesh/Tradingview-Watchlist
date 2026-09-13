@@ -552,7 +552,7 @@ function renderWatchlists(list) {
   if (!list || list.length === 0) {
     const empty = document.createElement("li");
     empty.className = "empty-state";
-    empty.innerHTML = 'Click the <img src="Images/New.png" alt="New" class="icon empty-plus"> button above to create your first watchlist.';
+    empty.innerHTML = 'Click the <span class="empty-plus-badge"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg></span> button above to create your first watchlist.';
     container.appendChild(empty);
     updateActionButtons();
     return;
@@ -576,7 +576,7 @@ function renderWatchlists(list) {
       const sync = document.createElement("button");
       sync.className = "resync-btn";
       sync.title = "Re-sync from Chartink";
-      sync.innerHTML = '<img src="Images/Refresh.png" alt="Re-sync" class="icon">';
+      sync.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>';
       sync.addEventListener('click', (e) => {
         e.stopPropagation();
         resyncWatchlistFromChartink(wl, sync);
@@ -770,7 +770,7 @@ async function renderStocks(stocks, lastSelected) {
 
         const del = document.createElement("button");
         del.className = "delete-btn delete-btn-right"; del.title = "Remove";
-        del.innerHTML = '<img src="Images/delete.png" class="icon small">';
+        del.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
         // Use the loop index, not indexOf — with duplicates the latter always hits the first row.
         del.onclick = (e) => { e.stopPropagation(); removeStockFromWatchlist(stock, index); };
         grp.appendChild(del);
