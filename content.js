@@ -188,6 +188,14 @@
   let tvApiConfirmed = false;
 
   async function performSeamlessSwitch(symbol) {
+    // If the symbol has no exchange prefix (bare symbol, e.g. "Auto" default market),
+    // TradingView's charting API setSymbol() cannot fuzzy-resolve it and will say "This symbol doesn't exist".
+    // Use the search-box method so TradingView's native search picks the primary listing.
+    if (!symbol.includes(':')) {
+      await performSearchBoxSwitch(symbol);
+      return;
+    }
+
     if (tvApiConfirmed) {
       window.postMessage({ __tvwl: 'setSymbol', symbol }, '*');
       return;
