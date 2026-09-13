@@ -5,7 +5,7 @@ browser side panel — no TradingView watchlist limit, no account, no tracking. 
 stocks from [Chartink](https://chartink.com) screeners or CSV files and open any
 symbol's chart on TradingView with one click. Works with TradingView's free plan.
 
-- **Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/keodmnkjfjgmbhoniajobonkkmgmnmei)
+- **Install:** [Chrome Web Store](https://chromewebstore.google.com/detail/chjgeokhoafgiendihkdkijpbapabckb)
 - **Website:** [alensarangsatheesh.github.io/Tradingview-Watchlist](https://alensarangsatheesh.github.io/Tradingview-Watchlist/)
 - **Privacy policy:** [privacy.html](https://alensarangsatheesh.github.io/Tradingview-Watchlist/privacy.html)
 
