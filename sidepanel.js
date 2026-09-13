@@ -1729,6 +1729,19 @@ settingsModal.onclick = (e) => { if (e.target === settingsModal) settingsModal.s
 themeDark.onclick = () => setTheme('dark');
 themeLight.onclick = () => setTheme('light');
 
+const tutorialLink = document.getElementById('tutorialLink');
+if (tutorialLink) {
+  tutorialLink.onclick = (e) => {
+    e.preventDefault();
+    const url = "https://alensarangsatheesh.github.io/Tradingview-Watchlist/tutorial.html";
+    if (typeof chrome !== 'undefined' && chrome.tabs && chrome.tabs.create) {
+      chrome.tabs.create({ url });
+    } else {
+      window.open(url, '_blank');
+    }
+  };
+}
+
 
 
 // ----------------- WATCHLIST 3-DOTS MENU & ACTIONS -----------------
